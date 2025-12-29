@@ -1,0 +1,301 @@
+body {
+  font-family: "Fredoka", sans-serif;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition: background 0.5s ease;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* TEMA BACKGROUND */
+.theme-default {
+  background-color: #e0f2fe;
+  background-image: radial-gradient(#bae6fd 2px, transparent 2px);
+  background-size: 32px 32px;
+}
+.theme-default #start-screen {
+  background: linear-gradient(135deg, #60a5fa, #a855f7);
+}
+
+.theme-night {
+  background-color: #0f172a;
+  background-image: radial-gradient(#334155 2px, transparent 2px);
+  background-size: 32px 32px;
+  color: #f8fafc;
+}
+.theme-night #start-screen {
+  background: linear-gradient(135deg, #1e293b, #334155);
+}
+
+.theme-sunset {
+  background-color: #fff7ed;
+  background-image: linear-gradient(to bottom right, #ffedd5, #fbcfe8);
+}
+.theme-sunset #start-screen {
+  background: linear-gradient(135deg, #fdba74, #f9a8d4);
+}
+
+/* Animasi */
+.tile-transition {
+  transition-property: transform, filter, top, left, opacity;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  80% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-pop {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.modal-box {
+  max-width: calc(100% - 40px);
+  width: 320px;
+}
+
+/* FIX POSISI TRAY (PORTRAIT) */
+#tray-container-wrapper {
+  position: absolute;
+  top: 80px; /* Nilai default */
+  left: 0;
+  width: 100vw; /* Pakai VW agar full layar */
+  display: flex;
+  justify-content: center !important; /* Wajib Important */
+  align-items: center;
+  z-index: 30;
+  pointer-events: none;
+  transition: top 0.3s ease;
+}
+
+/* Pastikan konten di dalamnya tidak punya margin aneh */
+#tray-scaler {
+  transform-origin: top center;
+  pointer-events: auto;
+  margin: 0 auto !important; /* Paksa tengah */
+  display: flex;
+  justify-content: center;
+}
+
+#board-container {
+  z-index: 10;
+  pointer-events: auto;
+  transition: margin-top 0.3s ease, transform 0.3s ease;
+  will-change: transform, margin-top;
+}
+
+/* --- UPDATE LANDSCAPE RESPONSIVE (VERSI FINAL - FIX POSISI) --- */
+@media only screen and (min-width: 480px) and (max-height: 500px) {
+  /* ==============================
+     1. HALAMAN UTAMA (START SCREEN)
+     ============================== */
+  #start-screen {
+    flex-direction: row !important; /* Susun menyamping */
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 40px !important;
+    gap: 20px !important; /* Kurangi gap sedikit */
+  }
+
+  /* --- DI DALAM @media only screen and (min-width: 480px) and (max-height: 500px) --- */
+
+  /* 1. LOGO JUDUL & BINTANG */
+  #start-screen > .animate-float {
+    margin: 0 !important;
+    margin-top: 40px !important;
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    transform: scale(0.8);
+    position: relative; /* Pastikan relative untuk bintang */
+  }
+
+  /* TAMBAHAN: Atur Bintang (Elemen anak pertama dari animate-float) */
+  #start-screen > .animate-float > div:first-child {
+    top: -5px !important; /* Dekatkan ke judul (sebelumnya -40px/top-10) */
+    left: -5px !important; /* Dekatkan ke judul (sebelumnya -40px/left-10) */
+    transform: rotate(-12deg) scale(0.8) !important; /* Kecilkan sedikit */
+  }
+
+  /* 2. SKOR TERTINGGI (POJOK KANAN ATAS) */
+  #start-screen > div:nth-child(2) {
+    position: absolute !important;
+    top: 5px !important; /* NAIKKAN KE ATAS (Sebelumnya 10px) */
+    right: 15px !important;
+    left: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    width: auto !important;
+    z-index: 50;
+
+    /* TAMPILAN BEST DI SAMPING SCORE */
+    display: flex !important; /* Aktifkan Flexbox */
+    flex-direction: row !important; /* Susun ke samping */
+    align-items: center !important; /* Rata tengah vertikal */
+    gap: 8px !important; /* Jarak antara Angka dan Badge Best */
+
+    transform: scale(0.7);
+    transform-origin: top right;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    padding: 4px 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Pastikan teks rata kanan agar rapi */
+  #start-screen > div:nth-child(2) .text-left {
+    text-align: right !important;
+    order: 1; /* Pastikan angka di kiri */
+  }
+
+  /* Pastikan Badge Best di sebelah kanan angka */
+  #start-screen > div:nth-child(2) .text-right {
+    order: 2; /* Pastikan badge di kanan */
+    margin-left: 0 !important;
+  }
+
+  /* CONTAINER TOMBOL (Kanan) */
+  #start-screen > .w-full.max-w-xs {
+    flex: 1;
+    margin: 0 !important;
+    /* TURUNKAN POSISI: Tambah margin top agar sejajar logo */
+    margin-top: 40px !important;
+    padding-bottom: 0 !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start; /* Rapat kiri mendekati logo */
+    transform: scale(0.85);
+    max-width: 280px !important;
+  }
+
+  /* Kecilkan padding tombol di landscape */
+  #start-screen button {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    font-size: 0.9rem; /* Font agak kecil */
+  }
+
+  /* --- FIX ELEMEN POJOK --- */
+
+  /* SKOR TERTINGGI (POJOK KANAN ATAS - LEBIH KECIL) */
+  #start-screen > div:nth-child(2) {
+    position: absolute !important;
+    top: 10px !important; /* Lebih mepet atas */
+    right: 15px !important; /* Lebih mepet kanan */
+    left: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    width: auto !important;
+    z-index: 50;
+    /* PERKECIL TAMPILAN AGAR RESPONSIF */
+    transform: scale(0.7);
+    transform-origin: top right;
+    background: rgba(255, 255, 255, 0.35); /* Sedikit lebih transparan */
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    padding: 4px 12px; /* Padding lebih tipis */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Perbaikan teks di dalam skor agar rapi saat diskala */
+  #start-screen > div:nth-child(2) p.text-xs {
+    font-size: 0.7rem; /* Kecilkan label */
+    margin-bottom: 0;
+  }
+  #start-screen > div:nth-child(2) p.text-2xl {
+    font-size: 1.25rem; /* Kecilkan angka */
+    line-height: 1.2;
+  }
+
+  /* FOOTER / VERSI (TENGAH BAWAH) */
+  #start-screen > p.mt-auto {
+    position: absolute !important;
+    bottom: 8px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    margin: 0 !important;
+    width: auto !important;
+    z-index: 50;
+    font-size: 9px; /* Perkecil font footer */
+    text-align: center;
+    white-space: nowrap;
+    opacity: 0.7;
+  }
+
+  /* ==============================
+     2. MODAL PENGATURAN & GAMEPLAY
+     ============================== */
+  /* Modal */
+  #settings-modal .modal-box {
+    width: 480px !important;
+    max-height: 90vh;
+    padding: 1rem !important;
+  }
+  #settings-modal .space-y-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  #settings-modal .space-y-3 > button:last-child,
+  #settings-modal .space-y-3 > div:nth-child(2) {
+    grid-column: span 2;
+  }
+
+  /* Gameplay */
+  #tray-container-wrapper {
+    top: 85px !important;
+  }
+  #game-header {
+    height: 35px !important;
+  }
+  #game-header > div {
+    padding: 2px 10px !important;
+  }
+  #game-footer {
+    display: none !important;
+  }
+}
+
+/* FIX TRAY TENGAH (Global) */
+#tray-content {
+  display: flex;
+  justify-content: center !important; /* Paksa tengah */
+  align-items: center;
+  margin: 0 auto;
+}
