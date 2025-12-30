@@ -1,3 +1,4 @@
+// --- UBAH SoundManager (script.js bagian atas) ---
 const SoundManager = {
   ctx: null,
   enabled: true,
@@ -6,54 +7,50 @@ const SoundManager = {
   init: function () {
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AudioContext();
-
-    // AMBIL DARI HTML SEKARANG
     this.bgmAudio = document.getElementById("bgm-audio");
     if (this.bgmAudio) {
-      this.bgmAudio.volume = 0.4;
+      this.bgmAudio.volume = bgmVolume; // Gunakan variabel global
     }
+  },
+
+  setBGMVol: function (val) {
+    bgmVolume = val;
+    if (this.bgmAudio) this.bgmAudio.volume = val;
   },
 
   startBGM: function () {
-    if (this.enabled && this.bgmAudio) {
-      // Promise safe play
+    if (this.bgmAudio && bgmVolume > 0) {
       const playPromise = this.bgmAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.log("Autoplay dicegah browser, menunggu interaksi user.");
-        });
-      }
-    }
-  },
-
-  stopBGM: function () {
-    if (this.bgmAudio) {
-      this.bgmAudio.pause();
-      this.bgmAudio.currentTime = 0; // Reset ke awal
+      if (playPromise !== undefined) playPromise.catch(() => {});
     }
   },
 
   playTone: function (freq, type, duration, vol = 0.1) {
-    if (!this.enabled || !this.ctx) return;
-    // Resume context jika ter-suspend (wajib untuk mobile)
-    if (this.ctx.state === "suspended") {
-      this.ctx.resume();
-    }
+    if (!this.ctx || sfxVolume <= 0) return; // Cek SFX volume
+    if (this.ctx.state === "suspended") this.ctx.resume();
+
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
+
     osc.type = type;
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+
+    // Kalikan volume suara dengan volume setting global (sfxVolume)
+    const finalVol = vol * sfxVolume;
+
+    gain.gain.setValueAtTime(finalVol, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(
       0.01,
       this.ctx.currentTime + duration
     );
+
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
     osc.stop(this.ctx.currentTime + duration);
   },
 
+  // ... (fungsi playClick, playMatch, dll biarkan sama, playTone di atas sudah handle volume)
   playClick: function () {
     this.playTone(800, "sine", 0.1);
   },
@@ -70,13 +67,6 @@ const SoundManager = {
     [300, 250, 200].forEach((f, i) =>
       setTimeout(() => this.playTone(f, "sawtooth", 0.4, 0.2), i * 300)
     );
-  },
-
-  toggle: function () {
-    this.enabled = !this.enabled;
-    if (this.enabled) this.startBGM();
-    else this.stopBGM();
-    return this.enabled;
   },
 };
 
@@ -195,7 +185,7 @@ const ICONS = {
     svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   },
   gem: {
-    color: "text-cyan-500",
+    color: "text-red-500",
     svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/></svg>',
   },
   chest: {
@@ -248,9 +238,12 @@ let gameState = "menu";
 let userIP = "";
 let isDeveloper = false;
 // Ganti IP di bawah ini dengan IP yang nanti muncul di layar Anda
-const DEVELOPER_IPS = [
-  // "182.8.227.167",
-];
+const DEVELOPER_IPS = ["182.8.227.167"];
+// --- UBAH & TAMBAH VARIABEL GLOBAL (script.js) ---
+let hintsRemaining = 3; // Jatah bantuan per level
+const MAX_HINTS = 3;
+let sfxVolume = 0.8;
+let bgmVolume = 0.4;
 
 const boardEl = document.getElementById("board-container");
 const trayEl = document.getElementById("tray-content");
@@ -493,17 +486,34 @@ function renderLevelGrid() {
   }
 }
 
+// --- UBAH FUNGSI loadLevelFromSelect (script.js) ---
 function loadLevelFromSelect(selectedLevel) {
   SoundManager.playClick();
-  closeLevelSelect();
-  startScreenEl.style.transform = "translateY(-100%)";
-  level = selectedLevel;
-  score = 0;
-  levelStartScore = 0; // Reset checkpoint skor karena pilih level manual
-  gameState = "playing";
-  updateUI();
-  generateLevel(level);
-  saveGameProgress();
+
+  // CEK APAKAH PEMAIN SEDANG PUNYA PROGRES SKOR?
+  // Jika skor > 0 dan sedang main/pause, tampilkan peringatan reset
+  if (
+    score > 0 &&
+    gameState !== "menu" &&
+    gameState !== "won" &&
+    gameState !== "lost"
+  ) {
+    showLevelConfirmModal(selectedLevel);
+  } else {
+    // Jika skor 0 atau baru mulai, langsung pindah tanpa tanya
+    // Reuse fungsi executeLevelJump agar kode tidak duplikat
+    // Kita panggil closeLevelSelect dulu manual karena executeLevelJump memanggilnya juga
+    closeLevelSelect();
+
+    startScreenEl.style.transform = "translateY(-100%)";
+    level = selectedLevel;
+    score = 0;
+    levelStartScore = 0;
+    gameState = "playing";
+    updateUI();
+    generateLevel(level);
+    saveGameProgress();
+  }
 }
 
 function nextLevel() {
@@ -564,6 +574,14 @@ function generateLevel(currentLevel) {
   tiles = [];
   tray = [];
   isProcessingMatch = false;
+
+  // RESET HINT SETIAP LEVEL
+  hintsRemaining = 3;
+  const hintBadge = document.getElementById("hint-count");
+  if (hintBadge) hintBadge.innerText = hintsRemaining;
+  const hintBtn = document.getElementById("btn-hint");
+  if (hintBtn) hintBtn.classList.remove("opacity-50", "cursor-not-allowed");
+
   renderTray();
   const numTriples = 6 + currentLevel * 2;
   let availableKeys = [...ICON_KEYS].sort(() => 0.5 - Math.random());
@@ -610,15 +628,19 @@ function generateLevel(currentLevel) {
   requestAnimationFrame(handleResize);
 }
 
-// --- GENERATOR LAYOUT FUNCTIONS (Sama seperti sebelumnya) ---
+// --- UBAH GENERATOR LAYOUT AGAR TIDAK MENUMPUK (FLAT) ---
+
+// 1. Pyramid (Dibuat lebih datar)
 function generatePyramidLayout(pool) {
   let idx = 0;
+  // Ubah z menjadi 0 semua, atau maksimal 1 layer tumpuk
   const layers = [
     { r: 5, c: 4, z: 0 },
-    { r: 4, c: 3, z: 1 },
-    { r: 3, c: 2, z: 2 },
-    { r: 2, c: 2, z: 3 },
+    { r: 4, c: 3, z: 0 }, // Z jadi 0 (sebelumnya 1)
+    { r: 3, c: 2, z: 1 }, // Cuma bagian puncak yang menumpuk sedikit
+    { r: 2, c: 2, z: 1 },
   ];
+  // ... (sisa kode generatePyramidLayout sama)
   const getOffset = (r, c) => ({
     x: -(c * TILE_SIZE) / 2 + TILE_SIZE / 2,
     y: -(r * TILE_SIZE) / 2 + TILE_SIZE / 2,
@@ -637,6 +659,84 @@ function generatePyramidLayout(pool) {
           );
       }
     }
+  });
+  addRemainingTiles(pool, idx);
+}
+
+// 2. Circle (Dibuat Flat z=0)
+function generateCircleLayout(pool) {
+  let idx = 0;
+  const rings = [
+    { r: 0, c: 1, z: 1 }, // Tengah agak naik dikit
+    { r: 1.3, c: 6, z: 0 }, // Sisanya di dasar (z=0)
+    { r: 2.4, c: 12, z: 0 },
+    { r: 3.5, c: 18, z: 0 },
+  ];
+  rings.forEach((ring) => {
+    const step = (Math.PI * 2) / ring.c;
+    for (let i = 0; i < ring.c; i++) {
+      if (idx >= pool.length) break;
+      addTile(
+        pool[idx++],
+        ring.r * TILE_SIZE * Math.cos(i * step),
+        ring.r * TILE_SIZE * Math.sin(i * step),
+        ring.z,
+        1
+      );
+    }
+  });
+  addRemainingTiles(pool, idx);
+}
+
+// 3. Spiral (Dibuat Flat)
+function generateSpiralLayout(pool) {
+  let idx = 0,
+    angle = 0,
+    radius = 0;
+  const MAX_SPIRAL_RADIUS = TILE_SIZE * 3.4;
+
+  while (idx < pool.length) {
+    if (radius > MAX_SPIRAL_RADIUS) {
+      radius = 0.2 * TILE_SIZE;
+      angle += 1.5;
+    }
+
+    // Z SELALU 0 (Tidak menumpuk)
+    let z = 0;
+
+    addTile(
+      pool[idx++],
+      radius * Math.cos(angle),
+      radius * Math.sin(angle),
+      z,
+      3
+    );
+    angle += 0.75;
+    radius += 4;
+  }
+  addRemainingTiles(pool, idx);
+}
+
+// 4. Butterfly & Grid (Pastikan Z rendah)
+function generateButterflyLayout(pool) {
+  let idx = 0;
+  // Koordinat manual, set Z ke 0 atau 1 max
+  const coords = [
+    { x: 0, y: 0, z: 1 },
+    { x: 1.2, y: 1.2, z: 0 },
+    { x: 1.2, y: -1.2, z: 0 },
+    { x: -1.2, y: 1.2, z: 0 },
+    { x: -1.2, y: -1.2, z: 0 },
+    { x: 2.4, y: 2.4, z: 0 },
+    { x: 2.4, y: -2.4, z: 0 },
+    { x: -2.4, y: 2.4, z: 0 },
+    { x: -2.4, y: -2.4, z: 0 },
+    { x: 0, y: 1.5, z: 0 },
+    { x: 0, y: -1.5, z: 0 },
+  ];
+  coords.forEach((p) => {
+    if (idx < pool.length)
+      addTile(pool[idx++], p.x * TILE_SIZE, p.y * TILE_SIZE, p.z, 4);
   });
   addRemainingTiles(pool, idx);
 }
@@ -1008,6 +1108,84 @@ function hideOverlay() {
   overlayEl.querySelector("div").classList.add("scale-90");
 }
 
+// --- TAMBAHKAN FUNGSI BARU DI SCRIPT.JS ---
+
+// 1. Fungsi Update Volume dari Slider
+function updateVolume(type, val) {
+  const decimalVal = val / 100;
+  if (type === "bgm") {
+    SoundManager.setBGMVol(decimalVal);
+    document.getElementById("bgm-val").innerText = val + "%";
+  } else {
+    sfxVolume = decimalVal;
+    document.getElementById("sfx-val").innerText = val + "%";
+  }
+}
+
+// 2. Fungsi Keluar Aplikasi
+function exitApp() {
+  if (confirm("Apakah Anda yakin ingin keluar?")) {
+    window.close(); // Untuk web/PWA tertentu
+    // Jika tidak bisa close, arahkan ke Google (sebagai tanda keluar)
+    window.location.href = "https://www.google.com";
+  }
+}
+
+// 3. Fungsi Bantuan (Hint)
+function useHint() {
+  if (gameState !== "playing" || hintsRemaining <= 0 || isProcessingMatch)
+    return;
+
+  // Logika Hint: Cari ubin di tray, lalu cari pasangannya di board
+  // Atau jika tray kosong, ambil sepasang dari board secara otomatis
+
+  let targetId = null;
+
+  // Prioritas 1: Cari pasangan untuk ubin yang SUDAH ADA di tray
+  if (tray.length > 0) {
+    targetId = tray[0].id; // Ambil ubin pertama di tray sebagai target
+  }
+  // Prioritas 2: Jika tray kosong, ambil random dari board
+  else if (tiles.length > 0) {
+    const randomTile = tiles.find((t) => !t.isBlocked); // Cari yang tidak terblokir dulu
+    if (randomTile) targetId = randomTile.id;
+    else targetId = tiles[0].id; // Terpaksa ambil yang terblokir (Magic!)
+  }
+
+  if (!targetId) return;
+
+  // Kurangi jatah hint
+  hintsRemaining--;
+  document.getElementById("hint-count").innerText = hintsRemaining;
+  if (hintsRemaining === 0) {
+    document
+      .getElementById("btn-hint")
+      .classList.add("opacity-50", "cursor-not-allowed");
+  }
+
+  // Efek Suara Magic
+  SoundManager.playTone(1500, "sine", 0.5);
+
+  // Cari 2 atau 3 ubin yang cocok di board/tray untuk diselesaikan
+  const tilesToRemove = tiles.filter((t) => t.id === targetId).slice(0, 3);
+
+  // Masukkan ke tray secara otomatis (Bypassing click logic)
+  tilesToRemove.forEach((t) => {
+    // Hapus dari tiles array
+    const idx = tiles.indexOf(t);
+    if (idx > -1) tiles.splice(idx, 1);
+    // Masukkan ke tray (abaikan kapasitas, ini magic)
+    tray.push(t);
+  });
+
+  updateInteractability();
+  renderBoard();
+  renderTray();
+
+  // Trigger cek match
+  checkMatch();
+}
+
 // --- UBAH FUNGSI handleResize (Baris Paling Bawah) ---
 function handleResize() {
   const width = window.innerWidth;
@@ -1101,4 +1279,68 @@ function checkDeveloperMode(element) {
       " <span class='text-green-400 font-bold'>(DEV MODE)</span>";
     element.style.color = "#fff";
   }
+}
+
+// --- TAMBAHAN LOGIKA MODAL BARU (script.js) ---
+
+// 1. Logika Modal Keluar
+const exitModal = document.getElementById("exit-modal");
+
+function exitApp() {
+  SoundManager.playClick();
+  exitModal.classList.remove("hidden");
+  setTimeout(() => exitModal.classList.remove("opacity-0"), 10);
+}
+
+function closeExitModal() {
+  SoundManager.playClick();
+  exitModal.classList.add("opacity-0");
+  setTimeout(() => exitModal.classList.add("hidden"), 300);
+}
+
+function confirmExitApp() {
+  window.close();
+  // Fallback jika window.close diblokir browser
+  window.location.href = "https://google.com";
+}
+
+// 2. Logika Modal Konfirmasi Level
+const levelConfirmModal = document.getElementById("level-confirm-modal");
+let pendingLevelToJump = null; // Menyimpan level yang ingin dituju sementara
+
+function showLevelConfirmModal(targetLevel) {
+  pendingLevelToJump = targetLevel;
+  levelConfirmModal.classList.remove("hidden");
+  setTimeout(() => levelConfirmModal.classList.remove("opacity-0"), 10);
+
+  // Set aksi tombol konfirmasi
+  document.getElementById("btn-confirm-jump").onclick = function () {
+    executeLevelJump(pendingLevelToJump);
+  };
+}
+
+function closeLevelConfirmModal() {
+  SoundManager.playClick();
+  levelConfirmModal.classList.add("opacity-0");
+  setTimeout(() => levelConfirmModal.classList.add("hidden"), 300);
+  pendingLevelToJump = null;
+}
+
+function executeLevelJump(selectedLevel) {
+  SoundManager.playClick();
+  closeLevelConfirmModal();
+  closeLevelSelect();
+
+  // Reset logika permainan
+  startScreenEl.style.transform = "translateY(-100%)";
+  level = selectedLevel;
+
+  // LOGIKA RESET SKOR (Ini yang membuat game adil)
+  score = 0;
+  levelStartScore = 0;
+
+  gameState = "playing";
+  updateUI();
+  generateLevel(level);
+  saveGameProgress();
 }

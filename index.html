@@ -124,7 +124,7 @@
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
             />
           </svg>
           Pilih Level
@@ -134,7 +134,14 @@
           onclick="showInfoModal()"
           class="w-full px-6 py-3 bg-white/20 border border-white/40 rounded-2xl hover:bg-white/30 transition text-white font-bold flex items-center justify-center gap-2"
         >
-          Info & Tutorial
+          Info & Tema
+        </button>
+
+        <button
+          onclick="exitApp()"
+          class="w-full px-6 py-3 bg-red-500/80 border border-red-400 rounded-2xl hover:bg-red-600 transition text-white font-bold flex items-center justify-center gap-2"
+        >
+          Keluar Aplikasi
         </button>
       </div>
 
@@ -175,6 +182,41 @@
           >
             Level 1
           </div>
+
+          <button
+            onclick="useHint()"
+            id="btn-hint"
+            class="relative p-2 bg-purple-100 rounded-full hover:bg-purple-200 transition shadow-sm text-purple-600 border border-purple-300"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m19 2 2 2-2 2-2-2 2-2Z" />
+              <path d="m5 2 2 2-2 2-2-2 2-2Z" />
+              <path
+                d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"
+              />
+              <path
+                d="m12 15-3-3a22 22 0 0 1 2-2 9.5 9.5 0 0 1 2.13-2.13c.79-.79 2.07-.79 2.91 0a2.18 2.18 0 0 1 .09 2.91c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"
+              />
+              <path d="m12 15 3 3" />
+            </svg>
+
+            <span
+              id="hint-count"
+              class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white"
+              >3</span
+            >
+          </button>
+
           <button
             onclick="showSettingsModal()"
             class="p-2 bg-slate-200 rounded-full hover:bg-slate-300 transition shadow-sm text-slate-600"
@@ -244,124 +286,52 @@
           PENGATURAN
         </h2>
 
-        <div class="space-y-3">
-          <button
-            onclick="toggleSound()"
-            id="btn-sound"
-            class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
-          >
-            <span id="sound-text">Suara: ON</span>
-          </button>
-
-          <div
-            class="bg-slate-50/90 p-3 rounded-xl max-h-[200px] overflow-y-auto scrollbar-hide"
-          >
-            <p
-              class="text-xs font-bold text-slate-500 mb-2 text-center sticky top-0 bg-slate-50/90 pb-1 z-10"
+        <div class="space-y-4">
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <h3
+              class="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider"
             >
-              PILIH TEMA (10 PILIHAN)
-            </p>
-            <div class="grid grid-cols-5 gap-2">
-              <button
-                onclick="changeTheme('theme-ocean')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-sky-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Ocean</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-sakura')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-pink-300 border-2 border-white shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Sakura</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-forest')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-green-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Forest</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-candy')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-yellow-200 border-2 border-white shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Candy</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-sunset')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-orange-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Sunset</span>
-              </button>
+              Pengaturan Suara
+            </h3>
 
-              <button
-                onclick="changeTheme('theme-cyberpunk')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-slate-900 border-2 border-cyan-400 shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Cyber</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-galaxy')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-indigo-900 border-2 border-purple-400 shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Galaxy</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-royal')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-stone-800 border-2 border-yellow-500 shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Royal</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-retro')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-fuchsia-900 border-2 border-pink-500 shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Retro</span>
-              </button>
-              <button
-                onclick="changeTheme('theme-matrix')"
-                class="flex flex-col items-center gap-1 group"
-              >
-                <div
-                  class="w-8 h-8 rounded-full bg-black border-2 border-green-500 shadow-sm group-hover:scale-110 transition"
-                ></div>
-                <span class="text-[8px] font-bold text-slate-600">Hacker</span>
-              </button>
+            <div class="mb-4">
+              <div class="flex justify-between mb-1">
+                <span class="text-xs font-bold text-slate-600"
+                  >Musik (BGM)</span
+                >
+                <span id="bgm-val" class="text-xs font-bold text-blue-500"
+                  >50%</span
+                >
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value="50"
+                oninput="updateVolume('bgm', this.value)"
+                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-xs font-bold text-slate-600"
+                  >Efek Suara (SFX)</span
+                >
+                <span id="sfx-val" class="text-xs font-bold text-purple-500"
+                  >80%</span
+                >
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value="80"
+                oninput="updateVolume('sfx', this.value)"
+                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              />
             </div>
           </div>
-
-          <button
-            onclick="showInfoModal()"
-            class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
-          >
-            Panduan & Info
-          </button>
 
           <button
             onclick="goToMainMenu()"
@@ -372,7 +342,7 @@
 
           <button
             onclick="closeSettingsModal()"
-            class="w-full mt-4 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl"
+            class="w-full mt-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl"
           >
             Tutup
           </button>
@@ -563,28 +533,48 @@
               <span class="bg-purple-100 text-purple-600 p-1 rounded-md text-xs"
                 >★</span
               >
-              Item Spesial
+              Item Petualangan
             </h3>
             <div class="grid grid-cols-4 gap-2 text-center">
               <div
                 class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
               >
-                📷<br />Kamera
+                🗺️<br />Peta Kuno
               </div>
               <div
                 class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
               >
-                👻<br />Hantu
+                ⚔️<br />Pedang
               </div>
               <div
                 class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
               >
-                💎<br />Diamond
+                💎<br />Permata
               </div>
               <div
                 class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
               >
-                🔥<br />Api
+                🧭<br />Kompas
+              </div>
+              <div
+                class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
+              >
+                💀<br />Bahaya
+              </div>
+              <div
+                class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
+              >
+                👑<br />Harta
+              </div>
+              <div
+                class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
+              >
+                🧪<br />Ramuan
+              </div>
+              <div
+                class="bg-slate-50 p-2 rounded-lg border text-[10px] font-bold text-slate-500"
+              >
+                🔑<br />Kunci
               </div>
             </div>
           </div>
@@ -604,6 +594,75 @@
         id="overlay-content"
         class="bg-white p-6 rounded-3xl shadow-2xl text-center modal-box transform transition-all duration-300 scale-90"
       ></div>
+    </div>
+
+    <div
+      id="exit-modal"
+      class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[250] hidden opacity-0 transition-opacity duration-300"
+    >
+      <div
+        class="bg-white p-6 rounded-3xl shadow-2xl modal-box max-w-sm text-center transform scale-100 transition-transform"
+      >
+        <div
+          class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"
+        >
+          🚪
+        </div>
+        <h2 class="text-xl font-black text-slate-800 mb-2">Keluar Game?</h2>
+        <p class="text-slate-600 text-sm mb-6">
+          Apakah Anda yakin ingin menutup aplikasi Tile Explorer?
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            onclick="closeExitModal()"
+            class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+          >
+            Batal
+          </button>
+          <button
+            onclick="confirmExitApp()"
+            class="py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg transition"
+          >
+            Ya, Keluar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="level-confirm-modal"
+      class="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[250] hidden opacity-0 transition-opacity duration-300"
+    >
+      <div
+        class="bg-white p-6 rounded-3xl shadow-2xl modal-box max-w-sm text-center transform scale-100 transition-transform"
+      >
+        <div
+          class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"
+        >
+          ⚠️
+        </div>
+        <h2 class="text-xl font-black text-slate-800 mb-2">Pindah Level?</h2>
+        <p class="text-slate-600 text-sm mb-6">
+          Jika pindah level sekarang,
+          <span class="font-bold text-red-500"
+            >Skor Saat Ini akan direset ke 0</span
+          >. Skor Tertinggi tetap aman.
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            onclick="closeLevelConfirmModal()"
+            class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+          >
+            Batal
+          </button>
+          <button
+            id="btn-confirm-jump"
+            class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg transition"
+          >
+            Lanjut Pindah
+          </button>
+        </div>
+      </div>
     </div>
 
     <script src="script.js"></script>
