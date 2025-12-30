@@ -1,5 +1,5 @@
 // --- UBAH BARIS PERTAMA JADI v.7 ---
-const CACHE_NAME = "tile-explorer-v.10"; // NAIKKAN VERSI
+const CACHE_NAME = "tile-explorer-v.11"; // NAIKKAN VERSI
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -38,3 +38,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
