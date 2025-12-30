@@ -386,3 +386,18 @@ body.theme-sunset {
     display: none !important;
   }
 }
+
+/* --- TAMBAHAN DI STYLE.CSS --- */
+
+/* Pastikan Start Screen bisa di-scroll jika konten terlalu panjang di HP kecil */
+#start-screen {
+  overflow-y: auto;
+  /* Fallback color biar tidak putih */
+  background-color: #0f172a;
+}
+
+/* Kunci elemen agar tidak terpotong di mode potret ekstrem */
+#start-screen .max-w-xs {
+  width: 100%;
+  max-width: 320px; /* Batasi lebar agar rapi */
+}

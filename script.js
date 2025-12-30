@@ -90,6 +90,18 @@ const StorageManager = {
   getHighScore: function () {
     return parseInt(localStorage.getItem("tileExplorerHighScore") || "0");
   },
+  saveBestTime: function (seconds) {
+    // Simpan jika belum ada (0) atau jika waktu baru lebih cepat (lebih kecil)
+    const current = parseInt(
+      localStorage.getItem("tileExplorerBestTime") || "0"
+    );
+    if (current === 0 || seconds < current) {
+      localStorage.setItem("tileExplorerBestTime", seconds);
+    }
+  },
+  getBestTime: function () {
+    return parseInt(localStorage.getItem("tileExplorerBestTime") || "0");
+  },
   saveTheme: function (theme) {
     localStorage.setItem("tileExplorerTheme", theme);
   },
@@ -100,10 +112,24 @@ const StorageManager = {
     const current = parseInt(
       localStorage.getItem("tileExplorerMaxLevel") || "1"
     );
+    // Kode lama hanya menyimpan jika lvl > current.
+    // Kita biarkan ini untuk progress normal.
     if (lvl > current) localStorage.setItem("tileExplorerMaxLevel", lvl);
+  },
+
+  // --- TAMBAHAN BARU: FUNGSI KHUSUS RESET ---
+  resetMaxLevel: function () {
+    // Paksa tulis ulang jadi 1 tanpa pengecekan
+    localStorage.setItem("tileExplorerMaxLevel", 1);
   },
   getMaxLevel: function () {
     return parseInt(localStorage.getItem("tileExplorerMaxLevel") || "1");
+  },
+  setGameCompleted: function () {
+    localStorage.setItem("tileExplorerCompleted", "true");
+  },
+  isGameCompleted: function () {
+    return localStorage.getItem("tileExplorerCompleted") === "true";
   },
 };
 
@@ -238,20 +264,23 @@ let gameState = "menu";
 let userIP = "";
 let isDeveloper = false;
 // Ganti IP di bawah ini dengan IP yang nanti muncul di layar Anda
-const DEVELOPER_IPS = ["182.8.227.167"];
+const DEVELOPER_IPS = [
+  // "182.8.227.167"
+];
 // --- UBAH & TAMBAH VARIABEL GLOBAL (script.js) ---
 let hintsRemaining = 3; // Jatah bantuan per level
 const MAX_HINTS = 3;
 let sfxVolume = 0.8;
 let bgmVolume = 0.4;
+let gameTimeSeconds = 0;
+let timerInterval = null;
+const HINT_COST = 500; // Biaya penggunaan bantuan
 
 const boardEl = document.getElementById("board-container");
 const trayEl = document.getElementById("tray-content");
 const trayCountEl = document.getElementById("tray-count");
 const overlayEl = document.getElementById("overlay");
 const overlayContentEl = document.getElementById("overlay-content");
-const scoreEl = document.getElementById("score-display");
-const levelEl = document.getElementById("level-display");
 const trayScalerEl = document.getElementById("tray-scaler");
 const startScreenEl = document.getElementById("start-screen");
 const highScoreEl = document.getElementById("high-score-display");
@@ -262,12 +291,18 @@ const levelSelectModal = document.getElementById("level-select-modal");
 const levelGrid = document.getElementById("level-grid");
 const trayContainerWrapper = document.getElementById("tray-container-wrapper"); // Ambil elemen wrapper
 
+// --- UBAH BAGIAN WINDOW LOAD (script.js) ---
 window.addEventListener("load", () => {
+  // Update tampilan awal
   highScoreEl.innerText = StorageManager.getHighScore();
+
+  // Panggil fungsi cek save (yang sekarang juga mengupdate Best Time)
   checkSaveGame();
-  fetchUserIP(); // <--- TAMBAHKAN BARIS INI
+
+  fetchUserIP();
+
   const savedTheme = StorageManager.getTheme();
-  if (savedTheme) changeTheme(savedTheme, false);
+  // Validasi tema (kode tema tetap sama...)
   const validThemes = [
     "theme-ocean",
     "theme-sakura",
@@ -281,16 +316,18 @@ window.addEventListener("load", () => {
     "theme-sunset",
   ];
 
-  // Jika tema tersimpan valid, pakai itu. Jika tidak (atau data lama), pakai Ocean.
   if (savedTheme && validThemes.includes(savedTheme)) {
     changeTheme(savedTheme, false);
   } else {
-    // Default fallback jika data lama korup/versi lama
     changeTheme("theme-ocean", false);
   }
+
+  // --- PERBAIKAN ERROR LEVEL EL ---
+  // Kita harus mendefinisikan levelEl di sini sebelum menggunakannya
+  const levelEl = document.getElementById("level-display");
+
   if (levelEl) {
     levelEl.style.cursor = "pointer";
-    // Efek visual saat hover (opsional, via class)
     levelEl.classList.add(
       "hover:scale-105",
       "active:scale-95",
@@ -299,12 +336,11 @@ window.addEventListener("load", () => {
 
     levelEl.addEventListener("click", () => {
       SoundManager.playClick();
-      // Buka modal pilih level jika gameState sedang main atau menu
       showLevelSelect();
     });
   }
 
-  // Inisialisasi audio saat user berinteraksi pertama kali
+  // Init Audio (tetap sama...)
   const initAudio = () => {
     SoundManager.init();
     document.body.removeEventListener("click", initAudio);
@@ -313,7 +349,6 @@ window.addEventListener("load", () => {
   document.body.addEventListener("click", initAudio);
   document.body.addEventListener("touchstart", initAudio);
 
-  // Panggil resize
   handleResize();
 });
 
@@ -372,6 +407,11 @@ function changeTheme(themeName, playSound = true) {
 function checkSaveGame() {
   const save = StorageManager.load();
   const scoreLabel = document.querySelector("#start-screen .text-xs.font-bold");
+  const bestTime = StorageManager.getBestTime();
+  const bestTimeEl = document.getElementById("best-time-display");
+  if (bestTimeEl) {
+    bestTimeEl.innerText = bestTime > 0 ? formatTime(bestTime) : "--:--";
+  }
   if (save && save.gameState === "playing") {
     btnContinue.classList.remove("hidden");
 
@@ -389,11 +429,50 @@ function checkSaveGame() {
   }
 }
 
+// --- UBAH FUNGSI RESET GAME (script.js) ---
+
+const newGameModal = document.getElementById("new-game-modal");
+
+// 1. Tampilkan Popup Konfirmasi
 function confirmNewGame() {
-  StorageManager.clear();
-  startGame();
+  SoundManager.playClick();
+  newGameModal.classList.remove("hidden");
+  setTimeout(() => newGameModal.classList.remove("opacity-0"), 10);
 }
 
+// 2. Tutup Popup
+function closeNewGameModal() {
+  SoundManager.playClick();
+  newGameModal.classList.add("opacity-0");
+  setTimeout(() => newGameModal.classList.add("hidden"), 300);
+}
+
+// --- UBAH FUNGSI executeNewGame DI SCRIPT.JS ---
+function executeNewGame() {
+  closeNewGameModal();
+
+  level = 1;
+  score = 0;
+  levelStartScore = 0;
+
+  // GUNAKAN FUNGSI BARU INI
+  StorageManager.resetMaxLevel();
+
+  // Hapus status tamat
+  localStorage.removeItem("tileExplorerCompleted");
+
+  // Render ulang kotak level agar gemboknya muncul lagi
+  renderLevelGrid();
+
+  startScreenEl.style.transform = "translateY(-100%)";
+  gameState = "playing";
+
+  updateUI();
+  generateLevel(level);
+  saveGameProgress();
+}
+
+// --- UBAH continueGame DI SCRIPT.JS ---
 function continueGame() {
   const save = StorageManager.load();
   if (save) {
@@ -403,12 +482,37 @@ function continueGame() {
       save.levelStartScore !== undefined ? save.levelStartScore : save.score;
     tiles = save.tiles;
     tray = save.tray;
+
+    // --- TAMBAHAN BARU: Muat Bantuan & Waktu ---
+
+    // 1. Muat Sisa Bantuan (Default 3 jika data lama tidak ada)
+    hintsRemaining =
+      save.hintsRemaining !== undefined ? save.hintsRemaining : 3;
+
+    // 2. Muat Waktu Berjalan (Default 0)
+    gameTimeSeconds =
+      save.gameTimeSeconds !== undefined ? save.gameTimeSeconds : 0;
+
+    // 3. Update Tampilan Badge Bantuan
+    const hintBadge = document.getElementById("hint-count");
+    if (hintBadge) hintBadge.innerText = hintsRemaining;
+
+    // 4. Update Tampilan Timer
+    updateTimerUI();
+
+    // ---------------------------------------------
+
     startScreenEl.style.transform = "translateY(-100%)";
     gameState = "playing";
+
     updateUI();
     renderBoard();
     renderTray();
     handleResize();
+
+    // 5. Jalankan Waktu Kembali
+    startTimer();
+
     SoundManager.playClick();
   }
 }
@@ -441,11 +545,17 @@ function startGame() {
   generateLevel(level);
 }
 
+// --- UBAH FUNGSI showLevelSelect (script.js) ---
 function showLevelSelect() {
   SoundManager.playClick();
+
+  // --- TAMBAHKAN BARIS INI ---
+  // Ini memaksa kotak level digambar ulang sesuai data terbaru (Terkunci/Terbuka)
+  renderLevelGrid();
+  // ---------------------------
+
   levelSelectModal.classList.remove("hidden");
   setTimeout(() => levelSelectModal.classList.remove("opacity-0"), 10);
-  renderLevelGrid();
 }
 
 function closeLevelSelect() {
@@ -454,34 +564,77 @@ function closeLevelSelect() {
   setTimeout(() => levelSelectModal.classList.add("hidden"), 300);
 }
 
+// --- UBAH renderLevelGrid DI SCRIPT.JS ---
 function renderLevelGrid() {
   levelGrid.innerHTML = "";
   const maxLevel = StorageManager.getMaxLevel();
+  const isGameFinished = StorageManager.isGameCompleted();
+  const save = StorageManager.load(); // Load data save untuk pengecekan
 
   for (let i = 1; i <= 20; i++) {
     const btn = document.createElement("button");
     const isLocked = i > maxLevel && !isDeveloper;
-    const isCurrent = i === level;
+    const isCurrent = i === maxLevel;
+    const isPast = i < maxLevel;
 
-    let className =
-      "aspect-square rounded-xl font-bold text-lg flex flex-col items-center justify-center shadow-sm transition-all ";
+    // Styling Dasar
+    btn.className =
+      "relative w-full aspect-square rounded-2xl font-black text-lg shadow-md transition-all flex flex-col items-center justify-center gap-1 border-b-4 active:border-b-0 active:translate-y-1";
 
-    if (isLocked) {
-      className += "bg-slate-300 text-slate-500 cursor-not-allowed";
-      btn.innerHTML = `<span class="text-2xl">🔒</span>`;
+    if (isDeveloper) {
+      // DEVELOPER
+      btn.classList.add("bg-purple-500", "border-purple-700", "text-white");
+      btn.innerHTML = `<span class="text-2xl">${i}</span><span class="text-[8px] opacity-70">DEV</span>`;
+      btn.onclick = () => loadLevelFromSelect(i);
     } else if (isCurrent) {
-      className +=
-        "bg-blue-600 text-white border-4 border-blue-300 shadow-lg scale-105 ring-2 ring-blue-400 ring-offset-2";
-      btn.innerHTML = `<span>${i}</span><span class="text-[10px] uppercase font-bold mt-1">Main</span>`;
-      btn.onclick = () => loadLevelFromSelect(i);
+      // LEVEL SAAT INI (Modifikasi Logika Lanjut)
+
+      // Cek apakah ada save data untuk level ini
+      if (save && save.level === i && save.gameState === "playing") {
+        // JIKA ADA SAVE: TOMBOL JADI HIJAU & LANJUTKAN
+        btn.classList.add(
+          "bg-green-500", // Ganti warna jadi hijau agar beda
+          "border-green-700",
+          "text-white",
+          "animate-pulse"
+        );
+        btn.innerHTML = `<span class="text-2xl drop-shadow-md">${i}</span><span class="text-[8px] font-bold bg-white/20 px-1 rounded">LANJUT</span>`;
+
+        // Aksi tombol: Tutup modal lalu Lanjutkan Game
+        btn.onclick = () => {
+          SoundManager.playClick();
+          closeLevelSelect();
+          continueGame();
+        };
+      } else {
+        // JIKA TIDAK ADA SAVE: TOMBOL BIRU & MAIN BARU
+        btn.classList.add(
+          "bg-blue-500",
+          "border-blue-700",
+          "text-white",
+          "animate-pulse"
+        );
+        btn.innerHTML = `<span class="text-2xl drop-shadow-md">${i}</span><span class="text-[8px] font-bold bg-white/20 px-1 rounded">MAIN</span>`;
+        btn.onclick = () => loadLevelFromSelect(i);
+      }
+    } else if (isPast) {
+      // LEVEL MASA LALU
+      btn.classList.add("bg-green-500", "border-green-700", "text-white");
+
+      if (!isGameFinished) {
+        btn.innerHTML = `<span class="text-xl opacity-80">${i}</span><span class="text-[10px]">✅</span>`;
+        btn.onclick = () => showRestrictionModal();
+      } else {
+        btn.innerHTML = `<span class="text-2xl">${i}</span><span class="text-[8px]">ULANG</span>`;
+        btn.onclick = () => loadLevelFromSelect(i);
+      }
     } else {
-      className +=
-        "bg-blue-100 text-blue-600 border-2 border-blue-300 hover:bg-blue-200 hover:scale-105 active:scale-95";
-      btn.innerHTML = `<span>${i}</span>`;
-      btn.onclick = () => loadLevelFromSelect(i);
+      // TERKUNCI
+      btn.classList.add("bg-slate-200", "border-slate-300", "text-slate-400");
+      btn.innerHTML = `<span class="text-xl">🔒</span>`;
+      btn.disabled = true;
     }
 
-    btn.className = className;
     levelGrid.appendChild(btn);
   }
 }
@@ -527,12 +680,25 @@ function nextLevel() {
   saveGameProgress();
 }
 
+// --- UPDATE restartLevel DI SCRIPT.JS ---
 function restartLevel() {
   SoundManager.playClick();
-  hideOverlay();
+
+  // Tutup semua kemungkinan modal yang terbuka
+  hideOverlay(); // Tutup layar kalah
+  closeSettingsModal(); // Tutup layar pengaturan
+
+  // RESET SKOR ke kondisi awal level
   score = levelStartScore;
-  updateUI(); // Update tampilan skor
+
+  updateUI();
+
+  // Generate Level ulang
+  // (Fungsi generateLevel otomatis mereset Waktu jadi 0 dan Bantuan jadi 3)
   generateLevel(level);
+
+  // Tampilkan notifikasi kecil (opsional/log console)
+  console.log(`Level ${level} di-restart. Skor kembali ke ${score}`);
 }
 
 // --- UBAH FUNGSI goToMainMenu (Baris ~420) ---
@@ -566,6 +732,8 @@ function saveGameProgress() {
       tiles,
       tray,
       gameState,
+      hintsRemaining,
+      gameTimeSeconds,
     });
 }
 
@@ -579,8 +747,11 @@ function generateLevel(currentLevel) {
   hintsRemaining = 3;
   const hintBadge = document.getElementById("hint-count");
   if (hintBadge) hintBadge.innerText = hintsRemaining;
-  const hintBtn = document.getElementById("btn-hint");
-  if (hintBtn) hintBtn.classList.remove("opacity-50", "cursor-not-allowed");
+
+  // RESET TIMER LEVEL
+  gameTimeSeconds = 0;
+  updateTimerUI();
+  startTimer(); // Mulai waktu
 
   renderTray();
   const numTriples = 6 + currentLevel * 2;
@@ -994,17 +1165,108 @@ function checkMatch() {
 function checkLoseCondition() {
   if (tray.length >= TRAY_CAPACITY) {
     gameState = "lost";
+    stopTimer(); // Stop waktu saat kalah
     SoundManager.playLose();
     setTimeout(showLose, 500);
   }
 }
+// --- UBAH checkWinCondition DI SCRIPT.JS ---
 function checkWinCondition() {
   if (tiles.length === 0 && tray.length === 0 && gameState === "playing") {
     gameState = "won";
+    stopTimer();
     SoundManager.playWin();
+
     StorageManager.saveMaxLevel(level + 1);
-    setTimeout(showWin, 500);
+
+    if (level >= 20) {
+      StorageManager.setGameCompleted();
+    }
+
+    // --- LOGIKA SKOR BARU ---
+    // Hitung skor dasar yang didapat dari level ini (Total skor sekarang - skor awal level)
+    // Tapi karena match score sudah ditambahkan real-time, kita hanya hitung bonus waktu sekarang.
+
+    const timeLimit = 300; // 5 menit
+    let timeBonus = 0;
+
+    // Hitung bonus
+    if (gameTimeSeconds < timeLimit) {
+      timeBonus = (timeLimit - gameTimeSeconds) * 5;
+    }
+
+    // Tambahkan bonus ke skor total
+    score += timeBonus;
+
+    StorageManager.saveHighScore(score);
+    StorageManager.saveBestTime(gameTimeSeconds);
+
+    // Tampilkan Popup dengan Rincian
+    setTimeout(() => {
+      showWin(timeBonus);
+    }, 500);
   }
+}
+
+// --- UBAH showWin DI SCRIPT.JS ---
+function showWin(bonus = 0) {
+  overlayEl.classList.remove("pointer-events-none", "opacity-0");
+  overlayEl.querySelector("div").classList.remove("scale-90");
+
+  // Format waktu
+  const timeStr = formatTime(gameTimeSeconds);
+
+  // Hitung Skor Dasar (Total saat ini dikurangi bonus yang baru ditambahkan)
+  const baseScore = score - bonus;
+
+  // HTML Popup Baru dengan Rincian Penjumlahan
+  overlayContentEl.innerHTML = `
+    <div class="relative pt-2">
+      <div class="w-20 h-20 bg-yellow-100 border-4 border-yellow-200 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg animate-bounce">
+        <span class="text-4xl">🏆</span>
+      </div>
+      
+      <h2 class="text-2xl font-black text-slate-800 mb-1 tracking-tight">LEVEL ${level} SELESAI!</h2>
+      <p class="text-xs text-slate-500 mb-5 font-bold tracking-widest uppercase">Luar Biasa!</p>
+
+      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-inner mb-5 text-sm w-full max-w-[280px] mx-auto relative overflow-hidden">
+        <div class="absolute -right-4 -top-4 text-slate-100 text-6xl opacity-50 rotate-12 select-none">#</div>
+        
+        <div class="relative z-10 space-y-2">
+            <div class="flex justify-between items-center text-slate-500 text-xs font-medium">
+            <span>⏱️ Waktu:</span>
+            <span class="font-mono">${timeStr}</span>
+            </div>
+
+            <div class="w-full h-px bg-slate-200"></div>
+
+            <div class="flex justify-between items-center text-slate-600">
+            <span>Skor Permainan</span>
+            <span class="font-bold text-slate-700">${baseScore}</span>
+            </div>
+            
+            <div class="flex justify-between items-center text-green-600">
+            <span>Bonus Waktu</span>
+            <span class="font-bold">+${bonus}</span>
+            </div>
+            
+            <div class="w-full border-t-2 border-dashed border-slate-300 my-1"></div>
+
+            <div class="flex justify-between items-center text-slate-800 pt-1">
+            <span class="font-black text-sm uppercase">Total Poin</span>
+            <span class="font-black text-2xl text-orange-500 drop-shadow-sm">${score}</span>
+            </div>
+        </div>
+      </div>
+
+      <button onclick="nextLevel()" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 group">
+        <span>Lanjut Level ${level + 1}</span>
+        <div class="bg-white/20 rounded-full p-1 group-hover:bg-white/30 transition">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </div>
+      </button>
+    </div>
+  `;
 }
 
 function renderBoard() {
@@ -1060,9 +1322,14 @@ function renderTray() {
   }
 }
 
+// --- GANTI FUNGSI updateUI DENGAN INI (script.js) ---
 function updateUI() {
-  scoreEl.innerText = score;
-  levelEl.innerText = `Level ${level}`;
+  // Ambil elemen secara langsung saat fungsi dipanggil agar akurat
+  const uiScore = document.getElementById("score-display");
+  const uiLevel = document.getElementById("level-display");
+
+  if (uiScore) uiScore.innerText = score;
+  if (uiLevel) uiLevel.innerText = `Level ${level}`;
 }
 function showSettingsModal() {
   SoundManager.playClick();
@@ -1091,13 +1358,7 @@ function toggleSound() {
     : "Suara: OFF";
   SoundManager.playClick();
 }
-function showWin() {
-  overlayEl.classList.remove("pointer-events-none", "opacity-0");
-  overlayEl.querySelector("div").classList.remove("scale-90");
-  overlayContentEl.innerHTML = `<div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">🏆</div><h2 class="text-xl font-black text-slate-800 mb-1">Level Selesai!</h2><button onclick="nextLevel()" class="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Lanjut Level ${
-    level + 1
-  }</button>`;
-}
+
 function showLose() {
   overlayEl.classList.remove("pointer-events-none", "opacity-0");
   overlayEl.querySelector("div").classList.remove("scale-90");
@@ -1130,26 +1391,129 @@ function exitApp() {
     window.location.href = "https://www.google.com";
   }
 }
+// --- TAMBAHAN FUNGSI FEEDBACK WA ---
+function sendFeedback() {
+  SoundManager.playClick();
 
-// 3. Fungsi Bantuan (Hint)
-function useHint() {
-  if (gameState !== "playing" || hintsRemaining <= 0 || isProcessingMatch)
+  // Nomor Tujuan (Format Internasional tanpa +)
+  const phoneNumber = "6282275894842";
+
+  // Data Perangkat untuk Debugging
+  const deviceAgent = navigator.userAgent;
+  const currentLevel = level;
+  const currentScore = score;
+
+  // Pesan Template
+  const message = `Halo Admin Tile Explorer,
+
+Saya ingin melaporkan bug/masalah pada game.
+Mohon dicek.
+
+--- Info Game ---
+Level: ${currentLevel}
+Skor: ${currentScore}
+Perangkat: ${deviceAgent}
+
+[Tulis detail masalah di sini dan LAMPIRKAN SCREENSHOT/GAMBAR masalahnya]
+`;
+
+  // Encode URL agar karakter spasi dan enter terbaca
+  const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+    message
+  )}`;
+
+  // Buka WhatsApp di tab baru
+  window.open(url, "_blank");
+}
+
+// --- 7. LOGIKA HINT BARU (Dengan Konfirmasi & Biaya) ---
+
+const hintConfirmModal = document.getElementById("hint-confirm-modal");
+
+function checkHintAvailability() {
+  // Cek apakah game sedang jalan
+  if (gameState !== "playing" || isProcessingMatch) return;
+
+  // Cek kuota
+  if (hintsRemaining <= 0) {
+    // --- UBAH DISINI: Ganti alert dengan fungsi modal baru ---
+    showNoHintModal();
     return;
+  }
 
-  // Logika Hint: Cari ubin di tray, lalu cari pasangannya di board
-  // Atau jika tray kosong, ambil sepasang dari board secara otomatis
+  // Tampilkan Modal Konfirmasi
+  SoundManager.playClick();
+  hintConfirmModal.classList.remove("hidden");
+  setTimeout(() => hintConfirmModal.classList.remove("opacity-0"), 10);
+}
+
+function closeHintModal() {
+  SoundManager.playClick();
+  hintConfirmModal.classList.add("opacity-0");
+  setTimeout(() => hintConfirmModal.classList.add("hidden"), 300);
+}
+
+// --- UBAH FUNGSI confirmUseHint (script.js) ---
+
+// Definisi Modal Poin Kurang
+const noScoreModal = document.getElementById("no-score-modal");
+
+function showNoScoreModal() {
+  SoundManager.playTone(300, "sawtooth", 0.3); // Suara error/denied
+  noScoreModal.classList.remove("hidden");
+  setTimeout(() => noScoreModal.classList.remove("opacity-0"), 10);
+}
+
+function closeNoScoreModal() {
+  SoundManager.playClick();
+  noScoreModal.classList.add("opacity-0");
+  setTimeout(() => noScoreModal.classList.add("hidden"), 300);
+}
+
+function confirmUseHint() {
+  closeHintModal(); // Tutup modal konfirmasi hint ("Apakah yakin?")
+
+  // Cek apakah skor cukup
+  if (score < HINT_COST) {
+    // GANTI ALERT LAMA DENGAN POPUP BARU
+    showNoScoreModal();
+    return;
+  }
+
+  // POTONG SKOR & JALANKAN (Sama seperti kode lama)
+  score -= HINT_COST;
+  updateUI();
+  executeHintLogic();
+}
+
+// --- LOGIKA MODAL BANTUAN HABIS (BARU) ---
+const noHintModal = document.getElementById("no-hint-modal");
+
+function showNoHintModal() {
+  SoundManager.playTone(200, "sawtooth", 0.3); // Suara "Tetot" pelan
+  noHintModal.classList.remove("hidden");
+  setTimeout(() => noHintModal.classList.remove("opacity-0"), 10);
+}
+
+function closeNoHintModal() {
+  SoundManager.playClick();
+  noHintModal.classList.add("opacity-0");
+  setTimeout(() => noHintModal.classList.add("hidden"), 300);
+}
+
+function executeHintLogic() {
+  // Ini logika useHint yang lama, dipindahkan kesini
 
   let targetId = null;
-
   // Prioritas 1: Cari pasangan untuk ubin yang SUDAH ADA di tray
   if (tray.length > 0) {
-    targetId = tray[0].id; // Ambil ubin pertama di tray sebagai target
+    targetId = tray[0].id;
   }
   // Prioritas 2: Jika tray kosong, ambil random dari board
   else if (tiles.length > 0) {
-    const randomTile = tiles.find((t) => !t.isBlocked); // Cari yang tidak terblokir dulu
+    const randomTile = tiles.find((t) => !t.isBlocked);
     if (randomTile) targetId = randomTile.id;
-    else targetId = tiles[0].id; // Terpaksa ambil yang terblokir (Magic!)
+    else targetId = tiles[0].id;
   }
 
   if (!targetId) return;
@@ -1157,11 +1521,6 @@ function useHint() {
   // Kurangi jatah hint
   hintsRemaining--;
   document.getElementById("hint-count").innerText = hintsRemaining;
-  if (hintsRemaining === 0) {
-    document
-      .getElementById("btn-hint")
-      .classList.add("opacity-50", "cursor-not-allowed");
-  }
 
   // Efek Suara Magic
   SoundManager.playTone(1500, "sine", 0.5);
@@ -1169,20 +1528,15 @@ function useHint() {
   // Cari 2 atau 3 ubin yang cocok di board/tray untuk diselesaikan
   const tilesToRemove = tiles.filter((t) => t.id === targetId).slice(0, 3);
 
-  // Masukkan ke tray secara otomatis (Bypassing click logic)
   tilesToRemove.forEach((t) => {
-    // Hapus dari tiles array
     const idx = tiles.indexOf(t);
     if (idx > -1) tiles.splice(idx, 1);
-    // Masukkan ke tray (abaikan kapasitas, ini magic)
     tray.push(t);
   });
 
   updateInteractability();
   renderBoard();
   renderTray();
-
-  // Trigger cek match
   checkMatch();
 }
 
@@ -1343,4 +1697,48 @@ function executeLevelJump(selectedLevel) {
   updateUI();
   generateLevel(level);
   saveGameProgress();
+}
+
+// --- 3. FUNGSI TIMER & FORMAT WAKTU (Tambahkan di bagian fungsi-fungsi) ---
+function formatTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function startTimer() {
+  stopTimer(); // Reset dulu
+  timerInterval = setInterval(() => {
+    if (gameState === "playing" && !isProcessingMatch) {
+      gameTimeSeconds++;
+      updateTimerUI();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function updateTimerUI() {
+  const timerEl = document.getElementById("timer-display");
+  if (timerEl) timerEl.innerText = formatTime(gameTimeSeconds);
+}
+
+// --- TAMBAHAN FUNGSI POPUP RESTRICTION ---
+const restrictionModal = document.getElementById("level-restriction-modal");
+
+function showRestrictionModal() {
+  SoundManager.playClick(); // Bunyi klik (opsional bunyi error jika ada)
+  restrictionModal.classList.remove("hidden");
+  setTimeout(() => restrictionModal.classList.remove("opacity-0"), 10);
+}
+
+function closeRestrictionModal() {
+  SoundManager.playClick();
+  restrictionModal.classList.add("opacity-0");
+  setTimeout(() => restrictionModal.classList.add("hidden"), 300);
 }
