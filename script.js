@@ -117,8 +117,8 @@ const StorageManager = {
   },
 };
 
-const TILE_SIZE = 50;
-const TRAY_TILE_SIZE = 42;
+const TILE_SIZE = 88; // Diturunkan dari 90 ke 75 agar tidak meluber ke luar layar
+const TRAY_TILE_SIZE = 70; // Disesuaikan proporsinya
 const TRAY_CAPACITY = 7;
 const TRAY_GAP = 8;
 // Lebar dasar tray sebelum di-scale
@@ -186,15 +186,71 @@ const ICONS = {
     color: "text-slate-700",
     svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
   },
+  compass: {
+    color: "text-blue-600",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+  },
+  map: {
+    color: "text-amber-700",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  },
+  gem: {
+    color: "text-cyan-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/></svg>',
+  },
+  chest: {
+    color: "text-yellow-600",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M12 6V4a2 2 0 0 1 2-2h-4a2 2 0 0 1 2 2v2"/><path d="M12 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>',
+  },
+  skull: {
+    color: "text-slate-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.667.667 1.333 1 2 1s1.333-.333 2-1"/><path d="M12 2C6.477 2 2 6.477 2 12c0 2.8 1.4 5.2 3.8 6.8.6.4 1.2 1.2 1.2 2.2v1h10v-1c0-1 .6-1.8 1.2-2.2 2.4-1.6 3.8-4 3.8-6.8 0-5.523-4.477-10-10-10Z"/></svg>',
+  },
+  key: {
+    color: "text-yellow-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>',
+  },
+  sword: {
+    color: "text-slate-400",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>',
+  },
+  potion: {
+    color: "text-pink-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z"/><path d="M12 2v5"/><path d="m7 7 2-2"/><path d="m17 7-2-2"/></svg>',
+  },
+  crown: {
+    color: "text-amber-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>',
+  },
+  anchor: {
+    color: "text-indigo-600",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>',
+  },
+  fire: {
+    color: "text-orange-500",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+  },
+  leaf: {
+    color: "text-green-600",
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+  },
 };
 const ICON_KEYS = Object.keys(ICONS);
 
 let tiles = [];
 let tray = [];
 let score = 0;
+let levelStartScore = 0; // VARIABEL BARU: Untuk menyimpan skor checkpoint
 let level = 1;
 let isProcessingMatch = false;
 let gameState = "menu";
+// --- TAMBAHAN BARU: MODE DEVELOPER ---
+let userIP = "";
+let isDeveloper = false;
+// Ganti IP di bawah ini dengan IP yang nanti muncul di layar Anda
+const DEVELOPER_IPS = [
+  // "182.8.227.167",
+];
 
 const boardEl = document.getElementById("board-container");
 const trayEl = document.getElementById("tray-content");
@@ -216,9 +272,44 @@ const trayContainerWrapper = document.getElementById("tray-container-wrapper"); 
 window.addEventListener("load", () => {
   highScoreEl.innerText = StorageManager.getHighScore();
   checkSaveGame();
-
+  fetchUserIP(); // <--- TAMBAHKAN BARIS INI
   const savedTheme = StorageManager.getTheme();
   if (savedTheme) changeTheme(savedTheme, false);
+  const validThemes = [
+    "theme-ocean",
+    "theme-sakura",
+    "theme-cyberpunk",
+    "theme-galaxy",
+    "theme-forest",
+    "theme-candy",
+    "theme-royal",
+    "theme-retro",
+    "theme-matrix",
+    "theme-sunset",
+  ];
+
+  // Jika tema tersimpan valid, pakai itu. Jika tidak (atau data lama), pakai Ocean.
+  if (savedTheme && validThemes.includes(savedTheme)) {
+    changeTheme(savedTheme, false);
+  } else {
+    // Default fallback jika data lama korup/versi lama
+    changeTheme("theme-ocean", false);
+  }
+  if (levelEl) {
+    levelEl.style.cursor = "pointer";
+    // Efek visual saat hover (opsional, via class)
+    levelEl.classList.add(
+      "hover:scale-105",
+      "active:scale-95",
+      "transition-transform"
+    );
+
+    levelEl.addEventListener("click", () => {
+      SoundManager.playClick();
+      // Buka modal pilih level jika gameState sedang main atau menu
+      showLevelSelect();
+    });
+  }
 
   // Inisialisasi audio saat user berinteraksi pertama kali
   const initAudio = () => {
@@ -233,21 +324,76 @@ window.addEventListener("load", () => {
   handleResize();
 });
 
+// --- UBAH FUNGSI changeTheme (script.js) ---
 function changeTheme(themeName, playSound = true) {
   const body = document.getElementById("game-body");
-  body.className = `h-screen w-screen fixed text-slate-800 transition-colors duration-500 overflow-hidden ${themeName}`;
-  if (themeName === "theme-night") body.classList.add("text-slate-100");
-  else body.classList.remove("text-slate-100");
+
+  // Daftar tema dark mode
+  const darkThemes = [
+    "theme-cyberpunk",
+    "theme-galaxy",
+    "theme-royal",
+    "theme-retro",
+    "theme-matrix",
+  ];
+
+  // Daftar semua tema untuk dihapus sebelum nambah yang baru
+  const allThemes = [
+    "theme-ocean",
+    "theme-sakura",
+    "theme-cyberpunk",
+    "theme-galaxy",
+    "theme-forest",
+    "theme-candy",
+    "theme-royal",
+    "theme-retro",
+    "theme-matrix",
+    "theme-sunset",
+  ];
+
+  // Hapus tema lama
+  body.classList.remove(...allThemes);
+
+  // Tambah tema baru
+  body.classList.add(themeName);
+
+  // Cek Dark Mode
+  if (darkThemes.includes(themeName)) {
+    body.classList.add("text-slate-100");
+    body.classList.remove("text-slate-800");
+  } else {
+    body.classList.add("text-slate-800");
+    body.classList.remove("text-slate-100");
+  }
 
   StorageManager.saveTheme(themeName);
+
   if (playSound) SoundManager.playClick();
+
+  // --- TAMBAHAN BARU: TUTUP MODAL OTOMATIS ---
+  // Menutup popup pengaturan atau info setelah memilih
+  closeSettingsModal();
+  closeInfoModal();
 }
 
 function checkSaveGame() {
   const save = StorageManager.load();
-  if (save && save.gameState === "playing")
+  const scoreLabel = document.querySelector("#start-screen .text-xs.font-bold");
+  if (save && save.gameState === "playing") {
     btnContinue.classList.remove("hidden");
-  else btnContinue.classList.add("hidden");
+
+    // PERBAIKAN: Tampilkan skor dari save game terakhir, bukan high score
+    highScoreEl.innerText = save.score;
+
+    // Ubah label agar pemain paham ini skor mereka saat ini
+    if (scoreLabel) scoreLabel.innerText = "SKOR SAAT INI";
+  } else {
+    btnContinue.classList.add("hidden");
+
+    // Jika tidak ada save, kembalikan ke High Score
+    highScoreEl.innerText = StorageManager.getHighScore();
+    if (scoreLabel) scoreLabel.innerText = "SKOR TERTINGGI";
+  }
 }
 
 function confirmNewGame() {
@@ -260,6 +406,8 @@ function continueGame() {
   if (save) {
     level = save.level;
     score = save.score;
+    levelStartScore =
+      save.levelStartScore !== undefined ? save.levelStartScore : save.score;
     tiles = save.tiles;
     tray = save.tray;
     startScreenEl.style.transform = "translateY(-100%)";
@@ -319,7 +467,7 @@ function renderLevelGrid() {
 
   for (let i = 1; i <= 20; i++) {
     const btn = document.createElement("button");
-    const isLocked = i > maxLevel;
+    const isLocked = i > maxLevel && !isDeveloper;
     const isCurrent = i === level;
 
     let className =
@@ -351,6 +499,7 @@ function loadLevelFromSelect(selectedLevel) {
   startScreenEl.style.transform = "translateY(-100%)";
   level = selectedLevel;
   score = 0;
+  levelStartScore = 0; // Reset checkpoint skor karena pilih level manual
   gameState = "playing";
   updateUI();
   generateLevel(level);
@@ -360,6 +509,7 @@ function loadLevelFromSelect(selectedLevel) {
 function nextLevel() {
   SoundManager.playClick();
   level++;
+  levelStartScore = score;
   StorageManager.saveMaxLevel(level);
   generateLevel(level);
   updateUI();
@@ -370,22 +520,43 @@ function nextLevel() {
 function restartLevel() {
   SoundManager.playClick();
   hideOverlay();
+  score = levelStartScore;
+  updateUI(); // Update tampilan skor
   generateLevel(level);
 }
 
+// --- UBAH FUNGSI goToMainMenu (Baris ~420) ---
 function goToMainMenu() {
   SoundManager.playClick();
   closeSettingsModal();
-  gameState = "menu";
+
+  // PERBAIKAN 1: Simpan progress DULUAN sebelum mengubah status game.
+  // Di kode lama, status diubah jadi 'menu' dulu, sehingga saveGameProgress()
+  // tidak berfungsi (karena ia butuh status 'playing' untuk mau menyimpan).
   saveGameProgress();
+
+  gameState = "menu";
+
+  // Update tampilan tombol 'Lanjutkan' dan 'Skor Saat Ini'
   checkSaveGame();
-  highScoreEl.innerText = StorageManager.getHighScore();
+
+  // PERBAIKAN 2: HAPUS baris di bawah ini yang ada di kode lama.
+  // Baris ini yang menyebabkan skor saat ini tertimpa kembali jadi skor tertinggi.
+  // highScoreEl.innerText = StorageManager.getHighScore(); <--- SUDAH DIHAPUS
+
   startScreenEl.style.transform = "translateY(0%)";
 }
 
 function saveGameProgress() {
   if (gameState === "playing")
-    StorageManager.save({ level, score, tiles, tray, gameState });
+    StorageManager.save({
+      level,
+      score,
+      levelStartScore,
+      tiles,
+      tray,
+      gameState,
+    });
 }
 
 function generateLevel(currentLevel) {
@@ -474,8 +645,8 @@ function generateCircleLayout(pool) {
   const rings = [
     { r: 0, c: 1, z: 3 },
     { r: 1.3, c: 6, z: 2 },
-    { r: 2.6, c: 12, z: 1 },
-    { r: 3.9, c: 18, z: 0 },
+    { r: 2.4, c: 12, z: 1 }, // Dirapatkan
+    { r: 3.5, c: 18, z: 0 }, // MAX RADIUS di sini (3.5)
   ];
   rings.forEach((ring) => {
     const step = (Math.PI * 2) / ring.c;
@@ -518,13 +689,53 @@ function generateGridLayout(pool) {
   });
   addRemainingTiles(pool, idx);
 }
+// --- UBAH generateCircleLayout (Baris ~540) ---
+function generateCircleLayout(pool) {
+  let idx = 0;
+  // Radius maksimal yang diizinkan (Pembatas Tak Terlihat)
+  // 3.6 x 75px = 270px radius (Total lebar 540px)
+  const rings = [
+    { r: 0, c: 1, z: 3 },
+    { r: 1.3, c: 6, z: 2 },
+    { r: 2.4, c: 12, z: 1 }, // Dirapatkan
+    { r: 3.5, c: 18, z: 0 }, // MAX RADIUS di sini (3.5)
+  ];
+
+  rings.forEach((ring) => {
+    const step = (Math.PI * 2) / ring.c;
+    for (let i = 0; i < ring.c; i++) {
+      if (idx >= pool.length) break;
+      addTile(
+        pool[idx++],
+        ring.r * TILE_SIZE * Math.cos(i * step),
+        ring.r * TILE_SIZE * Math.sin(i * step),
+        ring.z,
+        1
+      );
+    }
+  });
+  addRemainingTiles(pool, idx);
+}
+
+// --- UBAH generateSpiralLayout (Baris ~570) ---
 function generateSpiralLayout(pool) {
   let idx = 0,
     angle = 0,
     radius = 0;
-  while (idx < pool.length && radius < TILE_SIZE * 5) {
-    let z = Math.floor(4 - radius / (TILE_SIZE * 1.5));
+
+  // PEMBATAS KETAT: Turunkan sedikit dari 3.8 ke 3.4 agar aman di Potret
+  const MAX_SPIRAL_RADIUS = TILE_SIZE * 3.4;
+
+  while (idx < pool.length) {
+    // Jika radius mentok, reset ke tengah (layer 0)
+    if (radius > MAX_SPIRAL_RADIUS) {
+      radius = 0.2 * TILE_SIZE; // Reset ke pusat
+      angle += 1.5;
+    }
+
+    let z = Math.floor(4 - radius / (TILE_SIZE * 1.1));
     if (z < 0) z = 0;
+
     addTile(
       pool[idx++],
       radius * Math.cos(angle),
@@ -532,11 +743,15 @@ function generateSpiralLayout(pool) {
       z,
       3
     );
-    angle += 0.6;
-    radius += 4;
+
+    angle += 0.75; // Sudut lebih besar agar spiral lebih rapat
+    radius += 4; // Increment radius standar
   }
+
+  // Sisa ubin akan ditangani oleh addRemainingTiles yang baru (di tengah)
   addRemainingTiles(pool, idx);
 }
+
 function generateButterflyLayout(pool) {
   let idx = 0;
   const coords = [
@@ -570,22 +785,44 @@ function addTile(tileData, x, y, z, layer) {
     isBlocked: false,
   });
 }
+
+// --- UBAH FUNGSI addRemainingTiles (Ganti Seluruh Fungsi) ---
 function addRemainingTiles(pool, startIndex) {
   let poolIndex = startIndex;
-  let row = 0,
-    col = 0;
-  const startY = TILE_SIZE * 3.5;
-  const colsPerRow = 6;
-  const startX = -((colsPerRow * TILE_SIZE) / 2) + TILE_SIZE / 2;
+
+  // Jika tidak ada sisa, berhenti
+  if (poolIndex >= pool.length) return;
+
+  // PERUBAHAN DONAT:
+  // 1. Kita TIDAK menaruh ubin di tengah (0,0).
+  // 2. Kita mulai dari Layer 3.
+  //    Ini berarti Layer 1 dan 2 akan kosong, menciptakan "Lubang" di tengah.
+  let layer = 3;
+
   while (poolIndex < pool.length) {
-    const x = startX + col * TILE_SIZE;
-    const y = startY + row * TILE_SIZE;
-    addTile(pool[poolIndex++], x, y, 0, 0);
-    col++;
-    if (col >= colsPerRow) {
-      col = 0;
-      row++;
+    // Rumus Radial/Hexagonal
+    const itemsInLayer = layer * 6;
+    const stepAngle = (Math.PI * 2) / itemsInLayer;
+
+    // Jarak radius.
+    // Layer 3 * 0.85 * 75px = Radius awal sekitar 190px dari tengah.
+    // Cukup luas untuk membuat lubang yang lega.
+    const currentRadius = layer * (TILE_SIZE * 0.85);
+
+    for (let i = 0; i < itemsInLayer; i++) {
+      if (poolIndex >= pool.length) break;
+
+      // Hitung posisi melingkar
+      const angle = i * stepAngle;
+      const x = currentRadius * Math.cos(angle);
+      const y = currentRadius * Math.sin(angle);
+
+      // Taruh di Z=0 (Paling Bawah)
+      addTile(pool[poolIndex++], x, y, 0, 0);
     }
+
+    // Lanjut ke lingkaran luar berikutnya
+    layer++;
   }
 }
 
@@ -657,7 +894,6 @@ function checkMatch() {
 function checkLoseCondition() {
   if (tray.length >= TRAY_CAPACITY) {
     gameState = "lost";
-    StorageManager.clear();
     SoundManager.playLose();
     setTimeout(showLose, 500);
   }
@@ -772,54 +1008,54 @@ function hideOverlay() {
   overlayEl.querySelector("div").classList.add("scale-90");
 }
 
-/**
- * LOGIKA POSISI BARU (RESPONSIVE FIX)
- */
+// --- UBAH FUNGSI handleResize (Baris Paling Bawah) ---
 function handleResize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   const isLandscape = width > height;
 
   if (isLandscape) {
-    // FIX: Ubah dari 65px menjadi 85px agar tray TURUN ke bawah header
     trayContainerWrapper.style.top = "85px";
   } else {
     trayContainerWrapper.style.top = "90px";
   }
 
-  // Hitung Scale Tray agar muat di layar
-  const maxAllowedTrayWidth = width - 40; // Beri margin lebih (20 -> 40)
+  // --- 1. Skala Tray ---
+  const maxAllowedTrayWidth = width - 20;
   let newTrayScale = 1;
 
   if (BASE_TRAY_WIDTH > maxAllowedTrayWidth) {
     newTrayScale = maxAllowedTrayWidth / BASE_TRAY_WIDTH;
   }
-
-  // Perkecil sedikit lagi di landscape agar tidak terlalu penuh
-  if (isLandscape) newTrayScale *= 0.7;
+  if (isLandscape) newTrayScale *= 0.75;
 
   trayScalerEl.style.transform = `scale(${newTrayScale})`;
-
-  // PENTING: Pastikan origin tetap top-center untuk perbaikan posisi tengah
   trayScalerEl.style.transformOrigin = "top center";
 
-  // Hitung ulang posisi board
+  // --- 2. Hitung Area Papan (Board) ---
   const trayRealHeight = (isLandscape ? 60 : 80) * newTrayScale;
   const boardStartY =
     parseInt(trayContainerWrapper.style.top) +
     trayRealHeight +
-    (isLandscape ? 10 : 20);
+    (isLandscape ? 5 : 20);
 
-  let availableHeight = height - boardStartY - (isLandscape ? 10 : 40);
+  let availableHeight = height - boardStartY - (isLandscape ? 5 : 80);
   if (availableHeight < 100) availableHeight = 100;
 
-  const baseBoardSize = 500;
-  const scaleX = (width - 20) / baseBoardSize;
-  const scaleY = availableHeight / baseBoardSize;
+  // --- 3. PEMBATAS TAK TERLIHAT (SAFE BOX) ---
+  // NAIKKAN KE 880.
+  // Logika: Ubin dibesarkan (82px), maka kotak pembatas juga harus dibesarkan (880px)
+  // agar kamera melakukan "zoom out" secukupnya sehingga ubin besar tadi tetap masuk layar.
+  const SAFE_BOX_SIZE = 880;
+
+  const scaleX = (width - 20) / SAFE_BOX_SIZE;
+  const scaleY = availableHeight / SAFE_BOX_SIZE;
 
   let newBoardScale = Math.min(scaleX, scaleY);
-  newBoardScale = Math.min(newBoardScale, isLandscape ? 0.85 : 1.0);
-  newBoardScale = Math.max(newBoardScale, 0.4);
+
+  // Batasan Logis
+  newBoardScale = Math.min(newBoardScale, 1.0);
+  newBoardScale = Math.max(newBoardScale, 0.35);
 
   boardEl.style.marginTop = `${boardStartY}px`;
   boardEl.style.transform = `scale(${newBoardScale})`;
@@ -838,3 +1074,31 @@ document.body.addEventListener(
   },
   { once: true }
 ); // Hanya jalan sekali
+
+function fetchUserIP() {
+  // Menggunakan layanan gratis untuk cek IP
+  fetch("https://api.ipify.org?format=json")
+    .then((response) => response.json())
+    .then((data) => {
+      userIP = data.ip;
+      const ipDisplay = document.getElementById("ip-display");
+      if (ipDisplay) {
+        ipDisplay.innerText = userIP;
+        checkDeveloperMode(ipDisplay);
+      }
+    })
+    .catch((err) => {
+      const ipDisplay = document.getElementById("ip-display");
+      if (ipDisplay) ipDisplay.innerText = "Offline / Gagal";
+    });
+}
+
+function checkDeveloperMode(element) {
+  if (DEVELOPER_IPS.includes(userIP)) {
+    isDeveloper = true;
+    // Beri tanda visual bahwa mode developer aktif
+    element.innerHTML +=
+      " <span class='text-green-400 font-bold'>(DEV MODE)</span>";
+    element.style.color = "#fff";
+  }
+}

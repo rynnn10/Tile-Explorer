@@ -9,6 +9,8 @@
     <meta name="theme-color" content="#3b82f6" />
     <title>Tile Explorer - Riyan Edition Ultimate</title>
     <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="assets/iconapk.jpg" type="image/png" />
+    <link rel="shortcut icon" href="assets/iconapk.jpg" type="image/png" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link
@@ -19,8 +21,9 @@
   </head>
   <body
     id="game-body"
-    class="theme-default h-screen w-screen fixed text-slate-800 overflow-hidden"
+    class="theme-ocean h-screen w-screen fixed text-slate-800 overflow-hidden"
   >
+    >
     <audio id="bgm-audio" loop preload="auto">
       <source src="sfx/bc.mp3" type="audio/mpeg" />
     </audio>
@@ -135,8 +138,11 @@
         </button>
       </div>
 
-      <p class="mt-auto mb-4 text-white/60 text-sm font-medium">
-        Versi 1.0 - Riyan 2025
+      <p class="mt-auto mb-4 text-white/60 text-sm font-medium text-center">
+        Versi 1.0 - Riyan 2025 <br />
+        <span class="text-xs opacity-70"
+          >IP: <span id="ip-display">Mendeteksi...</span></span
+        >
       </p>
     </div>
 
@@ -247,23 +253,106 @@
             <span id="sound-text">Suara: ON</span>
           </button>
 
-          <div class="bg-slate-50 p-3 rounded-xl">
-            <p class="text-xs font-bold text-slate-500 mb-2 text-center">
-              PILIH TEMA
+          <div
+            class="bg-slate-50/90 p-3 rounded-xl max-h-[200px] overflow-y-auto scrollbar-hide"
+          >
+            <p
+              class="text-xs font-bold text-slate-500 mb-2 text-center sticky top-0 bg-slate-50/90 pb-1 z-10"
+            >
+              PILIH TEMA (10 PILIHAN)
             </p>
-            <div class="flex justify-center gap-2">
+            <div class="grid grid-cols-5 gap-2">
               <button
-                onclick="changeTheme('theme-default')"
-                class="w-10 h-10 rounded-full bg-blue-200 border-2 border-blue-400 shadow-sm hover:scale-110 transition"
-              ></button>
+                onclick="changeTheme('theme-ocean')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-sky-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Ocean</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-sakura')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-pink-300 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Sakura</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-forest')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-green-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Forest</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-candy')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-yellow-200 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Candy</span>
+              </button>
               <button
                 onclick="changeTheme('theme-sunset')"
-                class="w-10 h-10 rounded-full bg-orange-200 border-2 border-orange-400 shadow-sm hover:scale-110 transition"
-              ></button>
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-orange-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Sunset</span>
+              </button>
+
               <button
-                onclick="changeTheme('theme-night')"
-                class="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-600 shadow-sm hover:scale-110 transition"
-              ></button>
+                onclick="changeTheme('theme-cyberpunk')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-slate-900 border-2 border-cyan-400 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Cyber</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-galaxy')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-indigo-900 border-2 border-purple-400 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Galaxy</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-royal')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-stone-800 border-2 border-yellow-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Royal</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-retro')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-fuchsia-900 border-2 border-pink-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Retro</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-matrix')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-black border-2 border-green-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Hacker</span>
+              </button>
             </div>
           </div>
 
@@ -342,35 +431,99 @@
             <h3
               class="font-bold text-slate-700 text-center mb-3 text-sm uppercase tracking-wider"
             >
-              Pilih Suasana
+              Pilih Tema (10 Pilihan)
             </h3>
-            <div class="flex justify-center gap-4">
+            <div class="grid grid-cols-5 gap-2">
               <button
-                onclick="changeTheme('theme-default')"
+                onclick="changeTheme('theme-ocean')"
                 class="flex flex-col items-center gap-1 group"
               >
                 <div
-                  class="w-12 h-12 rounded-full bg-blue-200 border-4 border-white shadow-md group-hover:scale-110 transition-transform"
+                  class="w-8 h-8 rounded-full bg-sky-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
                 ></div>
-                <span class="text-[10px] font-bold text-slate-600">Siang</span>
+                <span class="text-[8px] font-bold text-slate-600">Ocean</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-sakura')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-pink-300 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Sakura</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-forest')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-green-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Forest</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-candy')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-yellow-200 border-2 border-white shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Candy</span>
               </button>
               <button
                 onclick="changeTheme('theme-sunset')"
                 class="flex flex-col items-center gap-1 group"
               >
                 <div
-                  class="w-12 h-12 rounded-full bg-orange-200 border-4 border-white shadow-md group-hover:scale-110 transition-transform"
+                  class="w-8 h-8 rounded-full bg-orange-400 border-2 border-white shadow-sm group-hover:scale-110 transition"
                 ></div>
-                <span class="text-[10px] font-bold text-slate-600">Sore</span>
+                <span class="text-[8px] font-bold text-slate-600">Sunset</span>
               </button>
+
               <button
-                onclick="changeTheme('theme-night')"
+                onclick="changeTheme('theme-cyberpunk')"
                 class="flex flex-col items-center gap-1 group"
               >
                 <div
-                  class="w-12 h-12 rounded-full bg-slate-800 border-4 border-white shadow-md group-hover:scale-110 transition-transform"
+                  class="w-8 h-8 rounded-full bg-slate-900 border-2 border-cyan-400 shadow-sm group-hover:scale-110 transition"
                 ></div>
-                <span class="text-[10px] font-bold text-slate-600">Malam</span>
+                <span class="text-[8px] font-bold text-slate-600">Cyber</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-galaxy')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-indigo-900 border-2 border-purple-400 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Galaxy</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-royal')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-stone-800 border-2 border-yellow-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Royal</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-retro')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-fuchsia-900 border-2 border-pink-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Retro</span>
+              </button>
+              <button
+                onclick="changeTheme('theme-matrix')"
+                class="flex flex-col items-center gap-1 group"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-black border-2 border-green-500 shadow-sm group-hover:scale-110 transition"
+                ></div>
+                <span class="text-[8px] font-bold text-slate-600">Hacker</span>
               </button>
             </div>
           </div>
