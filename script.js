@@ -133,8 +133,8 @@ const StorageManager = {
   },
 };
 
-const TILE_SIZE = 88; // Diturunkan dari 90 ke 75 agar tidak meluber ke luar layar
-const TRAY_TILE_SIZE = 70; // Disesuaikan proporsinya
+const TILE_SIZE = 75; // Perkecil dari 88 ke 75 agar base-nya lebih ramah layar HP
+const TRAY_TILE_SIZE = 65;
 const TRAY_CAPACITY = 7;
 const TRAY_GAP = 8;
 // Lebar dasar tray sebelum di-scale
@@ -272,6 +272,10 @@ let hintsRemaining = 3; // Jatah bantuan per level
 const MAX_HINTS = 3;
 let sfxVolume = 0.8;
 let bgmVolume = 0.4;
+let lastBgmVol = 50; // Menyimpan volume terakhir sebelum mute
+let lastSfxVol = 80;
+let isBgmMuted = false;
+let isSfxMuted = false;
 let gameTimeSeconds = 0;
 let timerInterval = null;
 const HINT_COST = 500; // Biaya penggunaan bantuan
@@ -754,7 +758,18 @@ function generateLevel(currentLevel) {
   startTimer(); // Mulai waktu
 
   renderTray();
-  const numTriples = 6 + currentLevel * 2;
+  let numTriples;
+  if (currentLevel >= 55) {
+    // KHUSUS LEVEL 55 KE ATAS:
+    // Kita kunci jumlah ubin di angka 100 set (total 300 ubin).
+    // Ini sedikit dikurangi dari rumus asli agar muat di layar dan tidak lag.
+    // Jumlah ini tidak akan bertambah lagi meskipun level naik ke 60, 70, dst.
+    numTriples = 100;
+  } else {
+    // LEVEL 1 - 54:
+    // Jumlah ubin bertambah secara normal (+2 set per level)
+    numTriples = 6 + currentLevel * 2;
+  }
   let availableKeys = [...ICON_KEYS].sort(() => 0.5 - Math.random());
   while (availableKeys.length < numTriples)
     availableKeys = [...availableKeys, ...ICON_KEYS];
@@ -772,13 +787,25 @@ function generateLevel(currentLevel) {
   }
   tilePool.sort(() => 0.5 - Math.random());
 
-  const layoutType = (currentLevel - 1) % 5;
+  let layoutType;
+
+  if (currentLevel >= 50) {
+    // KHUSUS LEVEL 50+: Hapus tata letak Lingkaran (Case 1)
+    // Kita hanya pakai: 0 (Pyramid), 2 (Grid), 3 (Spiral), 4 (Butterfly)
+    const allowedLayouts = [0, 2, 4];
+    const index = (currentLevel - 1) % allowedLayouts.length;
+    layoutType = allowedLayouts[index];
+  } else {
+    // LEVEL DI BAWAH 50: Pakai semua 5 tata letak termasuk Lingkaran
+    layoutType = (currentLevel - 1) % 5;
+  }
+
   switch (layoutType) {
     case 0:
       generatePyramidLayout(tilePool);
       break;
     case 1:
-      generateCircleLayout(tilePool);
+      generateCircleLayout(tilePool); // Tidak akan dipanggil di level 50+
       break;
     case 2:
       generateGridLayout(tilePool);
@@ -794,254 +821,239 @@ function generateLevel(currentLevel) {
   updateInteractability();
   renderBoard();
   saveGameProgress();
-
+  setTimeout(() => {
+    handleResize();
+  }, 50);
   // Pastikan layout diperbarui setelah render
   requestAnimationFrame(handleResize);
 }
 
-// --- UBAH GENERATOR LAYOUT AGAR TIDAK MENUMPUK (FLAT) ---
+// --- UPDATE GENERATOR LAYOUT (VERSI RAPAT/COMPACT) ---
 
-// 1. Pyramid (Dibuat lebih datar)
+// 1. SPIRAL GALAXY (Lebih Rapat)
+function generateSpiralLayout(pool) {
+  let idx = 0;
+  // Pusat
+  if (idx < pool.length) addTile(pool[idx++], 0, 0, 0, 0);
+
+  let layer = 1;
+  while (idx < pool.length) {
+    // PENGATURAN JARAK: Dikurangi drastis
+    // Dulu 1.02, sekarang 0.95 (sedikit overlap biar hemat tempat)
+    let currentRadius = layer * (TILE_SIZE * 0.92);
+
+    let circumference = 2 * Math.PI * currentRadius;
+    let countInLayer = Math.floor(circumference / (TILE_SIZE * 0.95)); // Rapatkan ubin bersebelahan
+
+    let stepAngle = (Math.PI * 2) / countInLayer;
+    let angleOffset = layer * 0.5;
+
+    for (let i = 0; i < countInLayer; i++) {
+      if (idx >= pool.length) break;
+      let angle = i * stepAngle + angleOffset;
+      addTile(
+        pool[idx++],
+        currentRadius * Math.cos(angle),
+        currentRadius * Math.sin(angle),
+        0,
+        0
+      );
+    }
+    layer++;
+  }
+}
+
+// --- UPDATE generateCircleLayout (SANGAT RAPAT/ULTRA COMPACT) ---
+function generateCircleLayout(pool) {
+  let idx = 0;
+  // Pusat
+  if (idx < pool.length) addTile(pool[idx++], 0, 0, 0, 0);
+
+  // KONFIGURASI BARU: Jari-jari (r) dikurangi drastis
+  // Sebelumnya r naik +1.1 per ring. Sekarang hanya +0.85 (Sangat Rapat)
+  const rings = [
+    { r: 1.0, c: 6 }, // Ring 1 (Sangat dekat pusat)
+    { r: 1.85, c: 12 }, // Ring 2 (Mulai menumpuk)
+    { r: 2.7, c: 19 }, // Ring 3
+    { r: 3.55, c: 26 }, // Ring 4
+    { r: 4.4, c: 32 }, // Ring 5
+    { r: 5.25, c: 40 }, // Ring 6 (Untuk level sangat tinggi)
+  ];
+
+  rings.forEach((ring) => {
+    const step = (Math.PI * 2) / ring.c;
+    for (let i = 0; i < ring.c; i++) {
+      if (idx >= pool.length) break;
+
+      // Radius dikali TILE_SIZE
+      const finalR = ring.r * TILE_SIZE;
+
+      addTile(
+        pool[idx++],
+        finalR * Math.cos(i * step),
+        finalR * Math.sin(i * step),
+        0,
+        0
+      );
+    }
+  });
+
+  // Jika masih ada sisa, lempar ke fungsi sisa yang juga sudah dipadatkan
+  addRemainingTiles(pool, idx);
+}
+
+// --- GANTI addRemainingTiles DI SCRIPT.JS ---
+function addRemainingTiles(pool, startIndex) {
+  // JIKA LEVEL 50+, GUNAKAN POLA KOTAK (BOX) AGAR TIDAK MELEBAR KELUAR LAYAR
+  if (level >= 50) {
+    addRemainingTilesBox(pool, startIndex);
+    return;
+  }
+
+  // --- LOGIKA LAMA (LINGKARAN) UNTUK LEVEL < 50 ---
+  let idx = startIndex;
+  let layer = 5.5;
+
+  while (idx < pool.length) {
+    let currentRadius = layer * (TILE_SIZE * 0.85);
+    let circumference = 2 * Math.PI * currentRadius;
+    let countInLayer = Math.floor(circumference / (TILE_SIZE * 0.85));
+    let stepAngle = (Math.PI * 2) / countInLayer;
+
+    for (let i = 0; i < countInLayer; i++) {
+      if (idx >= pool.length) break;
+      let angle = i * stepAngle;
+      addTile(
+        pool[idx++],
+        currentRadius * Math.cos(angle),
+        currentRadius * Math.sin(angle),
+        0,
+        0
+      );
+    }
+    layer++;
+  }
+}
+
+// --- TAMBAHKAN FUNGSI BARU INI DI BAWAHNYA ---
+function addRemainingTilesBox(pool, startIndex) {
+  let idx = startIndex;
+
+  // Mulai dari layer 3 (agar tidak menumpuk dengan grid dasar 5x5)
+  // Layer merepresentasikan "cincin kotak" ke-berapa dari pusat
+  let layer = 3;
+
+  while (idx < pool.length) {
+    // Tentukan batas koordinat untuk layer kotak ini
+    let start = -layer * (TILE_SIZE * 0.95); // Sedikit dirapatkan (0.95)
+    let end = layer * (TILE_SIZE * 0.95);
+    let step = TILE_SIZE * 0.95;
+
+    // 1. Sisi Atas (Kiri ke Kanan)
+    for (let x = start; x < end; x += step) {
+      if (idx >= pool.length) return;
+      addTile(pool[idx++], x, start, 0, 0);
+    }
+
+    // 2. Sisi Kanan (Atas ke Bawah)
+    for (let y = start; y < end; y += step) {
+      if (idx >= pool.length) return;
+      addTile(pool[idx++], end, y, 0, 0);
+    }
+
+    // 3. Sisi Bawah (Kanan ke Kiri)
+    for (let x = end; x > start; x -= step) {
+      if (idx >= pool.length) return;
+      addTile(pool[idx++], x, end, 0, 0);
+    }
+
+    // 4. Sisi Kiri (Bawah ke Atas)
+    for (let y = end; y > start; y -= step) {
+      if (idx >= pool.length) return;
+      addTile(pool[idx++], start, y, 0, 0);
+    }
+
+    layer++; // Pindah ke kotak yang lebih luar
+  }
+}
+
+// 2. PYRAMID / GRID (Padat)
 function generatePyramidLayout(pool) {
   let idx = 0;
-  // Ubah z menjadi 0 semua, atau maksimal 1 layer tumpuk
-  const layers = [
-    { r: 5, c: 4, z: 0 },
-    { r: 4, c: 3, z: 0 }, // Z jadi 0 (sebelumnya 1)
-    { r: 3, c: 2, z: 1 }, // Cuma bagian puncak yang menumpuk sedikit
-    { r: 2, c: 2, z: 1 },
-  ];
-  // ... (sisa kode generatePyramidLayout sama)
-  const getOffset = (r, c) => ({
-    x: -(c * TILE_SIZE) / 2 + TILE_SIZE / 2,
-    y: -(r * TILE_SIZE) / 2 + TILE_SIZE / 2,
-  });
-  layers.forEach((l) => {
-    const off = getOffset(l.r, l.c);
-    for (let r = 0; r < l.r; r++) {
-      for (let c = 0; c < l.c; c++) {
-        if (idx < pool.length)
-          addTile(
-            pool[idx++],
-            c * TILE_SIZE + off.x,
-            r * TILE_SIZE + off.y,
-            l.z,
-            0
-          );
-      }
-    }
-  });
-  addRemainingTiles(pool, idx);
-}
+  const size = Math.ceil(Math.sqrt(pool.length));
+  // Offset agar benar-benar tengah
+  const startOffset = -((size * TILE_SIZE) / 2) + TILE_SIZE / 2;
 
-// 2. Circle (Dibuat Flat z=0)
-function generateCircleLayout(pool) {
-  let idx = 0;
-  const rings = [
-    { r: 0, c: 1, z: 1 }, // Tengah agak naik dikit
-    { r: 1.3, c: 6, z: 0 }, // Sisanya di dasar (z=0)
-    { r: 2.4, c: 12, z: 0 },
-    { r: 3.5, c: 18, z: 0 },
-  ];
-  rings.forEach((ring) => {
-    const step = (Math.PI * 2) / ring.c;
-    for (let i = 0; i < ring.c; i++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       if (idx >= pool.length) break;
       addTile(
         pool[idx++],
-        ring.r * TILE_SIZE * Math.cos(i * step),
-        ring.r * TILE_SIZE * Math.sin(i * step),
-        ring.z,
-        1
+        startOffset + c * TILE_SIZE,
+        startOffset + r * TILE_SIZE,
+        0,
+        0
       );
     }
-  });
-  addRemainingTiles(pool, idx);
-}
-
-// 3. Spiral (Dibuat Flat)
-function generateSpiralLayout(pool) {
-  let idx = 0,
-    angle = 0,
-    radius = 0;
-  const MAX_SPIRAL_RADIUS = TILE_SIZE * 3.4;
-
-  while (idx < pool.length) {
-    if (radius > MAX_SPIRAL_RADIUS) {
-      radius = 0.2 * TILE_SIZE;
-      angle += 1.5;
-    }
-
-    // Z SELALU 0 (Tidak menumpuk)
-    let z = 0;
-
-    addTile(
-      pool[idx++],
-      radius * Math.cos(angle),
-      radius * Math.sin(angle),
-      z,
-      3
-    );
-    angle += 0.75;
-    radius += 4;
   }
   addRemainingTiles(pool, idx);
 }
 
-// 4. Butterfly & Grid (Pastikan Z rendah)
+// 3. BUTTERFLY (Dirapatkan Koordinatnya)
 function generateButterflyLayout(pool) {
   let idx = 0;
-  // Koordinat manual, set Z ke 0 atau 1 max
+  // Koordinat diperkecil pengalinya agar lebih rapat
+  const scale = 1.1; // Jarak antar ubin
   const coords = [
-    { x: 0, y: 0, z: 1 },
-    { x: 1.2, y: 1.2, z: 0 },
-    { x: 1.2, y: -1.2, z: 0 },
-    { x: -1.2, y: 1.2, z: 0 },
-    { x: -1.2, y: -1.2, z: 0 },
-    { x: 2.4, y: 2.4, z: 0 },
-    { x: 2.4, y: -2.4, z: 0 },
-    { x: -2.4, y: 2.4, z: 0 },
-    { x: -2.4, y: -2.4, z: 0 },
-    { x: 0, y: 1.5, z: 0 },
-    { x: 0, y: -1.5, z: 0 },
+    { x: 0, y: 0 },
+    { x: 1.0, y: 1.0 },
+    { x: 1.0, y: -1.0 },
+    { x: -1.0, y: 1.0 },
+    { x: -1.0, y: -1.0 },
+    { x: 2.0, y: 2.0 },
+    { x: 2.0, y: -2.0 },
+    { x: -2.0, y: 2.0 },
+    { x: -2.0, y: -2.0 },
+    { x: 0, y: 1.8 },
+    { x: 0, y: -1.8 },
+    { x: 2.8, y: 0 },
+    { x: -2.8, y: 0 },
+    { x: 1.4, y: 0 },
+    { x: -1.4, y: 0 },
   ];
   coords.forEach((p) => {
     if (idx < pool.length)
-      addTile(pool[idx++], p.x * TILE_SIZE, p.y * TILE_SIZE, p.z, 4);
-  });
-  addRemainingTiles(pool, idx);
-}
-function generateCircleLayout(pool) {
-  let idx = 0;
-  const rings = [
-    { r: 0, c: 1, z: 3 },
-    { r: 1.3, c: 6, z: 2 },
-    { r: 2.4, c: 12, z: 1 }, // Dirapatkan
-    { r: 3.5, c: 18, z: 0 }, // MAX RADIUS di sini (3.5)
-  ];
-  rings.forEach((ring) => {
-    const step = (Math.PI * 2) / ring.c;
-    for (let i = 0; i < ring.c; i++) {
-      if (idx >= pool.length) break;
       addTile(
         pool[idx++],
-        ring.r * TILE_SIZE * Math.cos(i * step),
-        ring.r * TILE_SIZE * Math.sin(i * step),
-        ring.z,
-        1
+        p.x * TILE_SIZE * scale,
+        p.y * TILE_SIZE * scale,
+        0,
+        0
       );
-    }
   });
   addRemainingTiles(pool, idx);
 }
+
+// 4. GRID (Flat)
 function generateGridLayout(pool) {
   let idx = 0;
-  const grids = [
-    { s: 6, z: 0 },
-    { s: 4, z: 1 },
-    { s: 2, z: 2 },
-  ];
-  grids.forEach((g) => {
-    const offset = -((g.s * TILE_SIZE) / 2) + TILE_SIZE / 2;
-    for (let r = 0; r < g.s; r++) {
-      for (let c = 0; c < g.s; c++) {
-        if (idx < pool.length) {
-          if (g.z === 0 && r > 1 && r < 4 && c > 1 && c < 4) continue;
-          addTile(
-            pool[idx++],
-            c * TILE_SIZE + offset,
-            r * TILE_SIZE + offset,
-            g.z,
-            2
-          );
-        }
+  // Buat grid 5x5 standar, tanpa tumpukan (Z selalu 0)
+  const size = 5;
+  const offset = -((size * TILE_SIZE) / 2) + TILE_SIZE / 2;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx < pool.length) {
+        addTile(
+          pool[idx++],
+          c * TILE_SIZE + offset,
+          r * TILE_SIZE + offset,
+          0,
+          0
+        );
       }
     }
-  });
-  addRemainingTiles(pool, idx);
-}
-// --- UBAH generateCircleLayout (Baris ~540) ---
-function generateCircleLayout(pool) {
-  let idx = 0;
-  // Radius maksimal yang diizinkan (Pembatas Tak Terlihat)
-  // 3.6 x 75px = 270px radius (Total lebar 540px)
-  const rings = [
-    { r: 0, c: 1, z: 3 },
-    { r: 1.3, c: 6, z: 2 },
-    { r: 2.4, c: 12, z: 1 }, // Dirapatkan
-    { r: 3.5, c: 18, z: 0 }, // MAX RADIUS di sini (3.5)
-  ];
-
-  rings.forEach((ring) => {
-    const step = (Math.PI * 2) / ring.c;
-    for (let i = 0; i < ring.c; i++) {
-      if (idx >= pool.length) break;
-      addTile(
-        pool[idx++],
-        ring.r * TILE_SIZE * Math.cos(i * step),
-        ring.r * TILE_SIZE * Math.sin(i * step),
-        ring.z,
-        1
-      );
-    }
-  });
-  addRemainingTiles(pool, idx);
-}
-
-// --- UBAH generateSpiralLayout (Baris ~570) ---
-function generateSpiralLayout(pool) {
-  let idx = 0,
-    angle = 0,
-    radius = 0;
-
-  // PEMBATAS KETAT: Turunkan sedikit dari 3.8 ke 3.4 agar aman di Potret
-  const MAX_SPIRAL_RADIUS = TILE_SIZE * 3.4;
-
-  while (idx < pool.length) {
-    // Jika radius mentok, reset ke tengah (layer 0)
-    if (radius > MAX_SPIRAL_RADIUS) {
-      radius = 0.2 * TILE_SIZE; // Reset ke pusat
-      angle += 1.5;
-    }
-
-    let z = Math.floor(4 - radius / (TILE_SIZE * 1.1));
-    if (z < 0) z = 0;
-
-    addTile(
-      pool[idx++],
-      radius * Math.cos(angle),
-      radius * Math.sin(angle),
-      z,
-      3
-    );
-
-    angle += 0.75; // Sudut lebih besar agar spiral lebih rapat
-    radius += 4; // Increment radius standar
   }
-
-  // Sisa ubin akan ditangani oleh addRemainingTiles yang baru (di tengah)
-  addRemainingTiles(pool, idx);
-}
-
-function generateButterflyLayout(pool) {
-  let idx = 0;
-  const coords = [
-    { x: 0, y: 0, z: 3 },
-    { x: 1.2, y: 1.2, z: 2 },
-    { x: 1.2, y: -1.2, z: 2 },
-    { x: -1.2, y: 1.2, z: 2 },
-    { x: -1.2, y: -1.2, z: 2 },
-    { x: 2.4, y: 2.4, z: 1 },
-    { x: 2.4, y: -2.4, z: 1 },
-    { x: -2.4, y: 2.4, z: 1 },
-    { x: -2.4, y: -2.4, z: 1 },
-    { x: 0, y: 1.5, z: 1 },
-    { x: 0, y: -1.5, z: 1 },
-  ];
-  coords.forEach((p) => {
-    if (idx < pool.length)
-      addTile(pool[idx++], p.x * TILE_SIZE, p.y * TILE_SIZE, p.z, 4);
-  });
   addRemainingTiles(pool, idx);
 }
 
@@ -1055,46 +1067,6 @@ function addTile(tileData, x, y, z, layer) {
     isInteractable: true,
     isBlocked: false,
   });
-}
-
-// --- UBAH FUNGSI addRemainingTiles (Ganti Seluruh Fungsi) ---
-function addRemainingTiles(pool, startIndex) {
-  let poolIndex = startIndex;
-
-  // Jika tidak ada sisa, berhenti
-  if (poolIndex >= pool.length) return;
-
-  // PERUBAHAN DONAT:
-  // 1. Kita TIDAK menaruh ubin di tengah (0,0).
-  // 2. Kita mulai dari Layer 3.
-  //    Ini berarti Layer 1 dan 2 akan kosong, menciptakan "Lubang" di tengah.
-  let layer = 3;
-
-  while (poolIndex < pool.length) {
-    // Rumus Radial/Hexagonal
-    const itemsInLayer = layer * 6;
-    const stepAngle = (Math.PI * 2) / itemsInLayer;
-
-    // Jarak radius.
-    // Layer 3 * 0.85 * 75px = Radius awal sekitar 190px dari tengah.
-    // Cukup luas untuk membuat lubang yang lega.
-    const currentRadius = layer * (TILE_SIZE * 0.85);
-
-    for (let i = 0; i < itemsInLayer; i++) {
-      if (poolIndex >= pool.length) break;
-
-      // Hitung posisi melingkar
-      const angle = i * stepAngle;
-      const x = currentRadius * Math.cos(angle);
-      const y = currentRadius * Math.sin(angle);
-
-      // Taruh di Z=0 (Paling Bawah)
-      addTile(pool[poolIndex++], x, y, 0, 0);
-    }
-
-    // Lanjut ke lingkaran luar berikutnya
-    layer++;
-  }
 }
 
 function updateInteractability() {
@@ -1369,17 +1341,76 @@ function hideOverlay() {
   overlayEl.querySelector("div").classList.add("scale-90");
 }
 
-// --- TAMBAHKAN FUNGSI BARU DI SCRIPT.JS ---
+// --- UPDATE FITUR SUARA (script.js) ---
 
-// 1. Fungsi Update Volume dari Slider
 function updateVolume(type, val) {
-  const decimalVal = val / 100;
+  const intVal = parseInt(val);
+  const decimalVal = intVal / 100;
+
   if (type === "bgm") {
+    // Logic Slider BGM
     SoundManager.setBGMVol(decimalVal);
-    document.getElementById("bgm-val").innerText = val + "%";
+    document.getElementById("bgm-val").innerText = intVal + "%";
+
+    // Auto update icon state
+    if (intVal > 0) {
+      isBgmMuted = false;
+      document.getElementById("icon-bgm-on").classList.remove("hidden");
+      document.getElementById("icon-bgm-off").classList.add("hidden");
+      lastBgmVol = intVal; // Simpan preferensi terakhir
+    } else {
+      isBgmMuted = true;
+      document.getElementById("icon-bgm-on").classList.add("hidden");
+      document.getElementById("icon-bgm-off").classList.remove("hidden");
+    }
   } else {
+    // Logic Slider SFX
     sfxVolume = decimalVal;
-    document.getElementById("sfx-val").innerText = val + "%";
+    document.getElementById("sfx-val").innerText = intVal + "%";
+
+    // Auto update icon state
+    if (intVal > 0) {
+      isSfxMuted = false;
+      document.getElementById("icon-sfx-on").classList.remove("hidden");
+      document.getElementById("icon-sfx-off").classList.add("hidden");
+      lastSfxVol = intVal;
+    } else {
+      isSfxMuted = true;
+      document.getElementById("icon-sfx-on").classList.add("hidden");
+      document.getElementById("icon-sfx-off").classList.remove("hidden");
+    }
+  }
+}
+
+function toggleMute(type) {
+  SoundManager.playClick();
+
+  if (type === "bgm") {
+    const slider = document.getElementById("slider-bgm");
+    if (isBgmMuted) {
+      // UNMUTE: Restore ke nilai terakhir (atau 50 jika 0)
+      const restoreVal = lastBgmVol > 0 ? lastBgmVol : 50;
+      slider.value = restoreVal;
+      updateVolume("bgm", restoreVal);
+    } else {
+      // MUTE: Set ke 0
+      lastBgmVol = parseInt(slider.value); // Simpan nilai sebelum dimatikan
+      slider.value = 0;
+      updateVolume("bgm", 0);
+    }
+  } else {
+    const slider = document.getElementById("slider-sfx");
+    if (isSfxMuted) {
+      // UNMUTE
+      const restoreVal = lastSfxVol > 0 ? lastSfxVol : 80;
+      slider.value = restoreVal;
+      updateVolume("sfx", restoreVal);
+    } else {
+      // MUTE
+      lastSfxVol = parseInt(slider.value);
+      slider.value = 0;
+      updateVolume("sfx", 0);
+    }
   }
 }
 
@@ -1540,57 +1571,80 @@ function executeHintLogic() {
   checkMatch();
 }
 
-// --- UBAH FUNGSI handleResize (Baris Paling Bawah) ---
+// --- UPDATE handleResize (LEBIH AMAN DARI TEPI LAYAR) ---
 function handleResize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   const isLandscape = width > height;
 
+  // 1. Atur Posisi Tray
   if (isLandscape) {
-    trayContainerWrapper.style.top = "85px";
+    trayContainerWrapper.style.top = "60px";
   } else {
     trayContainerWrapper.style.top = "90px";
   }
 
-  // --- 1. Skala Tray ---
+  // 2. Skala Tray
   const maxAllowedTrayWidth = width - 20;
   let newTrayScale = 1;
-
   if (BASE_TRAY_WIDTH > maxAllowedTrayWidth) {
     newTrayScale = maxAllowedTrayWidth / BASE_TRAY_WIDTH;
   }
-  if (isLandscape) newTrayScale *= 0.75;
-
+  if (isLandscape) newTrayScale *= 0.85;
   trayScalerEl.style.transform = `scale(${newTrayScale})`;
-  trayScalerEl.style.transformOrigin = "top center";
 
-  // --- 2. Hitung Area Papan (Board) ---
+  // 3. Hitung Ruang Tersedia
   const trayRealHeight = (isLandscape ? 60 : 80) * newTrayScale;
-  const boardStartY =
-    parseInt(trayContainerWrapper.style.top) +
-    trayRealHeight +
-    (isLandscape ? 5 : 20);
+  const topUsedSpace =
+    parseInt(trayContainerWrapper.style.top) + trayRealHeight + 30;
+  const bottomMargin = 80; // Margin bawah diperbesar agar tidak kena footer
 
-  let availableHeight = height - boardStartY - (isLandscape ? 5 : 80);
-  if (availableHeight < 100) availableHeight = 100;
+  // --- PERUBAHAN PENTING DI SINI ---
+  // Kita kurangi lebar tersedia sebanyak 60px (30px kiri, 30px kanan).
+  // Ini memaksa game untuk mengecilkan ubin (zoom out) LEBIH AWAL.
+  const availableWidth = width - 60;
+  const availableHeight = height - topUsedSpace - bottomMargin;
 
-  // --- 3. PEMBATAS TAK TERLIHAT (SAFE BOX) ---
-  // NAIKKAN KE 880.
-  // Logika: Ubin dibesarkan (82px), maka kotak pembatas juga harus dibesarkan (880px)
-  // agar kamera melakukan "zoom out" secukupnya sehingga ubin besar tadi tetap masuk layar.
-  const SAFE_BOX_SIZE = 880;
+  // 4. Hitung Ukuran Konten
+  if (tiles.length === 0) return;
 
-  const scaleX = (width - 20) / SAFE_BOX_SIZE;
-  const scaleY = availableHeight / SAFE_BOX_SIZE;
+  let minX = Infinity,
+    maxX = -Infinity;
+  let minY = Infinity,
+    maxY = -Infinity;
 
-  let newBoardScale = Math.min(scaleX, scaleY);
+  tiles.forEach((t) => {
+    if (t.x < minX) minX = t.x;
+    if (t.x > maxX) maxX = t.x;
+    if (t.y < minY) minY = t.y;
+    if (t.y > maxY) maxY = t.y;
+  });
 
-  // Batasan Logis
-  newBoardScale = Math.min(newBoardScale, 1.0);
-  newBoardScale = Math.max(newBoardScale, 0.35);
+  // Padding Bounding Box
+  const contentWidth = maxX - minX + TILE_SIZE * 1.5;
+  const contentHeight = maxY - minY + TILE_SIZE * 1.5;
 
-  boardEl.style.marginTop = `${boardStartY}px`;
-  boardEl.style.transform = `scale(${newBoardScale})`;
+  // 5. Hitung Skala
+  const scaleX = availableWidth / contentWidth;
+  const scaleY = availableHeight / contentHeight;
+
+  let finalScale = Math.min(scaleX, scaleY);
+
+  // 6. Batasan Skala
+  finalScale = Math.min(finalScale, 1.0);
+
+  // Batas bawah ekstrem (0.25) agar ubin tidak hilang,
+  // tapi normalnya auto-scale akan menangani ini dengan baik.
+  if (finalScale < 0.25) finalScale = 0.25;
+
+  // Terapkan
+  boardEl.style.marginTop = `${topUsedSpace}px`;
+
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  boardEl.style.transform = `scale(${finalScale}) translate(${-centerX}px, ${-centerY}px)`;
+  boardEl.style.transformOrigin = "center top";
 }
 
 window.addEventListener("resize", handleResize);
@@ -1625,14 +1679,64 @@ function fetchUserIP() {
     });
 }
 
+// --- UPDATE checkDeveloperMode DI SCRIPT.JS ---
 function checkDeveloperMode(element) {
   if (DEVELOPER_IPS.includes(userIP)) {
     isDeveloper = true;
-    // Beri tanda visual bahwa mode developer aktif
+
+    // Tanda Visual di Menu Utama
     element.innerHTML +=
       " <span class='text-green-400 font-bold'>(DEV MODE)</span>";
     element.style.color = "#fff";
+
+    // --- BARU: TAMPILKAN TOMBOL NAVIGASI DEV ---
+    const devControls = document.getElementById("dev-controls");
+    if (devControls) {
+      devControls.classList.remove("hidden");
+    }
   }
+}
+
+// --- TAMBAHAN FUNGSI NAVIGASI DEVELOPER ---
+
+function devNextLevel() {
+  if (!isDeveloper) return;
+  SoundManager.playClick();
+
+  level++;
+  // Simpan max level agar tidak terkunci
+  StorageManager.saveMaxLevel(level);
+
+  // Reset skor level ini agar bersih
+  levelStartScore = score;
+
+  // Generate
+  generateLevel(level);
+  updateUI();
+
+  // Efek visual kecil
+  const btn = document.querySelector("#dev-controls button:last-child");
+  btn.classList.add("bg-green-600");
+  setTimeout(() => btn.classList.remove("bg-green-600"), 200);
+
+  console.log(`[DEV] Skipped to Level ${level}`);
+}
+
+function devPrevLevel() {
+  if (!isDeveloper || level <= 1) return;
+  SoundManager.playClick();
+
+  level--;
+  levelStartScore = score; // Pertahankan skor berjalan
+
+  generateLevel(level);
+  updateUI();
+
+  const btn = document.querySelector("#dev-controls button:first-child");
+  btn.classList.add("bg-green-600");
+  setTimeout(() => btn.classList.remove("bg-green-600"), 200);
+
+  console.log(`[DEV] Back to Level ${level}`);
 }
 
 // --- TAMBAHAN LOGIKA MODAL BARU (script.js) ---
