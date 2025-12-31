@@ -25,7 +25,7 @@ const SoundManager = {
     }
   },
 
-  playTone: function (freq, type, duration, vol = 0.1) {
+  playTone: function (freq, type, duration, vol = 0.5) {
     if (!this.ctx || sfxVolume <= 0) return; // Cek SFX volume
     if (this.ctx.state === "suspended") this.ctx.resume();
 
@@ -35,8 +35,12 @@ const SoundManager = {
     osc.type = type;
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
-    // Kalikan volume suara dengan volume setting global (sfxVolume)
-    const finalVol = vol * sfxVolume;
+    // --- BAGIAN INI YANG DIUBAH AGAR LEBIH KERAS ---
+    const BOOST_FACTOR = 4.0; // Naikkan volume 4x lipat
+    let finalVol = vol * sfxVolume * BOOST_FACTOR;
+
+    // Batasi maksimal 1.0 agar speaker tidak pecah/kresek
+    if (finalVol > 1.0) finalVol = 1.0;
 
     gain.gain.setValueAtTime(finalVol, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(
@@ -50,26 +54,29 @@ const SoundManager = {
     osc.stop(this.ctx.currentTime + duration);
   },
 
-  // ... (fungsi playClick, playMatch, dll biarkan sama, playTone di atas sudah handle volume)
+  // --- UPDATE NILAI VOLUME DI FUNGSI BAWAH INI ---
   playClick: function () {
-    this.playTone(800, "sine", 0.1);
+    // Volume naik dari 0.1 ke 0.3
+    this.playTone(800, "sine", 0.1, 0.3);
   },
   playMatch: function () {
-    this.playTone(1200, "sine", 0.1);
-    setTimeout(() => this.playTone(1800, "sine", 0.2), 100);
+    // Volume naik dari 0.1/0.2 ke 0.4/0.5
+    this.playTone(1200, "sine", 0.1, 0.4);
+    setTimeout(() => this.playTone(1800, "sine", 0.2, 0.5), 100);
   },
   playWin: function () {
+    // Volume naik
     [523, 659, 783, 1046].forEach((f, i) =>
-      setTimeout(() => this.playTone(f, "triangle", 0.3, 0.2), i * 150)
+      setTimeout(() => this.playTone(f, "triangle", 0.3, 0.5), i * 150)
     );
   },
   playLose: function () {
+    // Volume naik
     [300, 250, 200].forEach((f, i) =>
-      setTimeout(() => this.playTone(f, "sawtooth", 0.4, 0.2), i * 300)
+      setTimeout(() => this.playTone(f, "sawtooth", 0.4, 0.5), i * 300)
     );
   },
 };
-
 const StorageManager = {
   save: function (data) {
     localStorage.setItem("tileExplorerSave", JSON.stringify(data));
@@ -741,35 +748,33 @@ function saveGameProgress() {
     });
 }
 
+// --- UBAH generateLevel DI SCRIPT.JS ---
 function generateLevel(currentLevel) {
   gameState = "playing";
   tiles = [];
   tray = [];
   isProcessingMatch = false;
 
-  // RESET HINT SETIAP LEVEL
+  // RESET HINT & TIMER
   hintsRemaining = 3;
   const hintBadge = document.getElementById("hint-count");
   if (hintBadge) hintBadge.innerText = hintsRemaining;
 
-  // RESET TIMER LEVEL
   gameTimeSeconds = 0;
   updateTimerUI();
-  startTimer(); // Mulai waktu
+  startTimer();
 
   renderTray();
-  let numTriples;
-  if (currentLevel >= 55) {
-    // KHUSUS LEVEL 55 KE ATAS:
-    // Kita kunci jumlah ubin di angka 100 set (total 300 ubin).
-    // Ini sedikit dikurangi dari rumus asli agar muat di layar dan tidak lag.
-    // Jumlah ini tidak akan bertambah lagi meskipun level naik ke 60, 70, dst.
-    numTriples = 100;
-  } else {
-    // LEVEL 1 - 54:
-    // Jumlah ubin bertambah secara normal (+2 set per level)
-    numTriples = 6 + currentLevel * 2;
-  }
+
+  // --- 1. BATAS JUMLAH UBIN (CAP LEVEL 11) ---
+  // Level 11 = 6 + (11*2) = 28 Set (84 Ubin)
+  // Kita kunci maksimal di 28 set untuk selamanya.
+  const MAX_SETS = 28;
+
+  let numTriples = Math.min(6 + currentLevel * 2, MAX_SETS);
+
+  // ------------------------------------------
+
   let availableKeys = [...ICON_KEYS].sort(() => 0.5 - Math.random());
   while (availableKeys.length < numTriples)
     availableKeys = [...availableKeys, ...ICON_KEYS];
@@ -787,16 +792,20 @@ function generateLevel(currentLevel) {
   }
   tilePool.sort(() => 0.5 - Math.random());
 
+  // --- 2. PEMILIHAN TATA LETAK (LAYOUT) ---
   let layoutType;
 
-  if (currentLevel >= 50) {
-    // KHUSUS LEVEL 50+: Hapus tata letak Lingkaran (Case 1)
-    // Kita hanya pakai: 0 (Pyramid), 2 (Grid), 3 (Spiral), 4 (Butterfly)
-    const allowedLayouts = [0, 2, 4];
+  // Daftar Layout Aman (Tidak Melebar):
+  // 0: Pyramid, 2: Grid, 4: Butterfly, 5: Diamond (Baru), 6: Frame (Baru)
+  // Kita hapus layout 1 (Circle) dan 3 (Spiral) untuk level tinggi agar aman.
+
+  if (currentLevel >= 11) {
+    // Array berisi ID layout yang aman & tidak melebar
+    const allowedLayouts = [0, 2, 4, 5, 6, 7, 8, 9, 10, 11];
     const index = (currentLevel - 1) % allowedLayouts.length;
     layoutType = allowedLayouts[index];
   } else {
-    // LEVEL DI BAWAH 50: Pakai semua 5 tata letak termasuk Lingkaran
+    // Rotasi 5 layout dasar untuk level 1-10
     layoutType = (currentLevel - 1) % 5;
   }
 
@@ -805,26 +814,51 @@ function generateLevel(currentLevel) {
       generatePyramidLayout(tilePool);
       break;
     case 1:
-      generateCircleLayout(tilePool); // Tidak akan dipanggil di level 50+
-      break;
+      generateCircleLayout(tilePool);
+      break; // Hanya level < 11
     case 2:
       generateGridLayout(tilePool);
       break;
     case 3:
       generateSpiralLayout(tilePool);
-      break;
+      break; // Hanya level < 11
     case 4:
       generateButterflyLayout(tilePool);
+      break;
+    case 5:
+      generateDiamondLayout(tilePool);
+      break;
+    case 6:
+      generateFrameLayout(tilePool);
+      break;
+    // --- LAYOUT BARU ---
+    case 7:
+      generateCrossLayout(tilePool);
+      break; // Tambah
+    case 8:
+      generateXLayout(tilePool);
+      break; // Silang
+    case 9:
+      generateHourglassLayout(tilePool);
+      break; // Jam Pasir
+    case 10:
+      generateTowersLayout(tilePool);
+      break; // Menara
+    case 11:
+      generateCheckerboardLayout(tilePool);
+      break; // Catur
+    default:
+      generateGridLayout(tilePool);
       break;
   }
 
   updateInteractability();
   renderBoard();
   saveGameProgress();
+
   setTimeout(() => {
     handleResize();
   }, 50);
-  // Pastikan layout diperbarui setelah render
   requestAnimationFrame(handleResize);
 }
 
@@ -1055,6 +1089,211 @@ function generateGridLayout(pool) {
     }
   }
   addRemainingTiles(pool, idx);
+}
+
+// 5. DIAMOND LAYOUT (Bentuk Wajik/Belah Ketupat)
+function generateDiamondLayout(pool) {
+  let idx = 0;
+  const size = 7; // Grid 7x7 virtual
+  const center = 3; // Titik tengah
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Rumus Wajik: Jarak dari tengah (horizontal + vertikal) <= radius
+      // Ini membuat bentuk diamond yang rapi dan terpusat
+      if (Math.abs(r - center) + Math.abs(c - center) <= 3) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  // Sisa ubin (jika ada) disusun kotak rapi di luar
+  addRemainingTilesBox(pool, idx);
+}
+
+// 6. FRAME LAYOUT (Bentuk Bingkai Kotak)
+function generateFrameLayout(pool) {
+  let idx = 0;
+  const size = 6; // Grid 6x6
+  const center = 2.5;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Logika: Isi pinggiran (Frame) DAN titik tengah
+      const isEdge = r === 0 || r === size - 1 || c === 0 || c === size - 1;
+      const isCenter = r >= 2 && r <= 3 && c >= 2 && c <= 3;
+
+      if (isEdge || isCenter) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
+}
+
+// --- 5 TATA LETAK BARU (AMAN & RAPI) ---
+
+// 7. CROSS LAYOUT (Bentuk Tanda Tambah Tebal)
+function generateCrossLayout(pool) {
+  let idx = 0;
+  const size = 7; // Grid 7x7
+  const center = 3;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Logika: Isi kolom tengah atau baris tengah (dengan ketebalan 3 blok)
+      // Ini membuat bentuk "+" yang tebal dan kokoh di tengah layar
+      if (Math.abs(r - center) <= 1 || Math.abs(c - center) <= 1) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
+}
+
+// 8. X-SHAPE LAYOUT (Bentuk Huruf X)
+function generateXLayout(pool) {
+  let idx = 0;
+  const size = 7; // Grid 7x7
+  const center = 3;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Logika Diagonal: Garis miring kiri ke kanan & kanan ke kiri
+      if (
+        r === c ||
+        r + c === size - 1 ||
+        Math.abs(r - c) === 1 ||
+        Math.abs(r + c - (size - 1)) === 1
+      ) {
+        // Menebalkan garis
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
+}
+
+// 9. HOURGLASS LAYOUT (Jam Pasir)
+function generateHourglassLayout(pool) {
+  let idx = 0;
+  const size = 7;
+  const center = 3;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Segitiga Atas & Segitiga Bawah
+      // r <= c && r + c <= size - 1 (Atas)
+      // r >= c && r + c >= size - 1 (Bawah)
+      const isTop = r <= c && r + c < size;
+      const isBottom = r >= c && r + c >= size - 1;
+
+      if (isTop || isBottom) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
+}
+
+// 10. TOWERS LAYOUT (Dua Menara Kembar)
+function generateTowersLayout(pool) {
+  let idx = 0;
+  const size = 6;
+  const center = 2.5;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Isi kolom kiri (0,1) dan kolom kanan (4,5)
+      // Tengah dibiarkan kosong
+      if (c <= 1 || c >= size - 2) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+      // Tambahkan jembatan kecil di tengah
+      if (r === 2 || r === 3) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
+}
+
+// 11. CHECKERBOARD LAYOUT (Papan Catur)
+function generateCheckerboardLayout(pool) {
+  let idx = 0;
+  const size = 7;
+  const center = 3;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (idx >= pool.length) break;
+
+      // Isi selang-seling (Genap + Genap = Genap, Ganjil + Ganjil = Genap)
+      if ((r + c) % 2 === 0) {
+        addTile(
+          pool[idx++],
+          (c - center) * TILE_SIZE,
+          (r - center) * TILE_SIZE,
+          0,
+          0
+        );
+      }
+    }
+  }
+  addRemainingTilesBox(pool, idx);
 }
 
 function addTile(tileData, x, y, z, layer) {
