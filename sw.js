@@ -1,5 +1,5 @@
 // --- UBAH BARIS PERTAMA JADI v.7 ---
-const CACHE_NAME = "tile-explorer-v.10"; // NAIKKAN VERSI
+const CACHE_NAME = "tile-explorer-v.12"; // NAIKKAN VERSI
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
